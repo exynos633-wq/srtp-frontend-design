@@ -1,0 +1,21 @@
+# Local operating-system files
+.DS_Store
+._*
+
+# Original model assets stay local; arrange separate delivery for rendering tests.
+/*.glb
+/*.ply
+
+# Generated frontend dependencies and build outputs
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Private local configuration (public configuration examples may be committed)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
