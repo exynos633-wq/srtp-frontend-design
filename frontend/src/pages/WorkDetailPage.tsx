@@ -119,7 +119,7 @@ export default function WorkDetailPage() {
         </div>
       ) : null}
 
-      {work ? (
+      {!notFound && work ? (
         <div className={styles.layout}>
           <div className={styles.viewerColumn}>
             <PreviewViewer key={work.id} work={work} onEntered={handleEntered} />
