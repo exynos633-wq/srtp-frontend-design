@@ -73,6 +73,14 @@ function inferFormat(assetId: string): ModelFormat {
   return /ply|gaussian/i.test(assetId) ? 'gaussian-ply' : 'glb'
 }
 
+/** 仅替换封面地址以演示加载失败；作品数据仍来自正常读取。 */
+const BROKEN_COVER_URL = '/mock/cover-missing.png'
+
+function withCoverScenario<T extends { coverUrl: string }>(work: T): T {
+  if (getMockScenario() !== 'cover-failure') return work
+  return { ...work, coverUrl: BROKEN_COVER_URL }
+}
+
 function toWriteResult(work: MockWork): AdminWork {
   return toAdminWork(work)
 }
@@ -82,7 +90,7 @@ export const handlers = [
     const scenario = getMockScenario()
     if (scenario === 'list-failure') return fail(500, 'INTERNAL_ERROR', '读取作品列表失败。')
     if (scenario === 'empty') return HttpResponse.json({ items: [] })
-    return HttpResponse.json({ items: listPublishedWorks() })
+    return HttpResponse.json({ items: listPublishedWorks().map(withCoverScenario) })
   }),
 
   http.get(/\/api\/works\/([^/]+)$/, ({ params }) => {
@@ -92,7 +100,7 @@ export const handlers = [
     if (scenario === 'empty') return fail(404, 'WORK_NOT_FOUND', '作品不存在或未公开。')
     const work = findPublicWork(id)
     if (!work) return fail(404, 'WORK_NOT_FOUND', '作品不存在或未公开。')
-    return HttpResponse.json(work)
+    return HttpResponse.json(withCoverScenario(work))
   }),
 
   http.get(/\/api\/globe\/cities$/, () => {

@@ -8,6 +8,7 @@
 .back {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
   min-height: 44px;
   color: var(--color-text-secondary);
   font-size: var(--text-label);
@@ -19,46 +20,49 @@
   color: var(--color-text);
 }
 
+.backArrow {
+  font-size: var(--text-heading);
+  line-height: 1;
+}
+
+.stateBlock {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 720px;
+  margin-top: var(--space-6);
+}
+
+.stateTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: var(--weight-title);
+  overflow-wrap: anywhere;
+}
+
+.stateAction {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .layout {
   display: grid;
   gap: var(--grid-gap);
   margin-top: var(--space-2);
 }
 
-.viewer {
-  display: grid;
-  gap: var(--space-3);
-  align-content: start;
+.viewerColumn {
   min-width: 0;
 }
 
-/* 图像区固定中性承托底，玻璃场景不透入（规范 §2.1、§9.1）。 */
-.cover {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 16 / 10;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-panel);
-  background: var(--color-image-bed);
-}
-
-.coverNote {
-  color: var(--color-text-muted);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-/* 工作与阅读界面用实色面板，长文不再叠玻璃（规范 §2.2）。 */
+/* 工作与阅读界面用实色面板，长文不叠玻璃（视觉规范 §2.2）。 */
 .info {
   display: grid;
   gap: var(--space-5);
   align-content: start;
+  min-width: 0;
   padding: var(--panel-padding);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-panel);
@@ -67,27 +71,47 @@
 
 .infoHeader {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .title {
+  margin: 0;
   color: var(--color-text);
-  font-size: var(--text-title);
-  line-height: var(--leading-title);
-  font-weight: var(--weight-title);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+  overflow-wrap: anywhere;
+}
+
+.title:focus {
+  outline: none;
 }
 
 .city {
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
 
-.meta {
+/* 点赞预留只是状态占位，不是可提交控件，也不显示数量。 */
+.likePlaceholder {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: start;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
   color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
-  line-height: var(--leading-meta);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.likeIcon {
+  font-size: var(--text-body);
 }
 
 .section {
@@ -98,24 +122,46 @@
 }
 
 .sectionTitle {
+  margin: 0;
   color: var(--color-text);
   font-size: var(--text-heading);
   line-height: var(--leading-heading);
   font-weight: var(--weight-heading);
 }
 
-/* 纯文字介绍保留换行（产品规则），不渲染 Markdown。 */
+/* 纯文字介绍保留换行，不渲染 HTML／Markdown。 */
 .paragraph {
+  margin: 0;
   color: var(--color-text);
   font-size: var(--text-body);
   line-height: var(--leading-body);
   white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.placeholderText {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.commentSection {
+  min-height: 112px;
 }
 
 @media (max-width: 767px) {
-  .cover {
-    aspect-ratio: auto;
-    min-height: 220px;
+  .page {
+    padding-top: var(--space-2);
+  }
+
+  .stateTitle {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+  }
+
+  .info {
+    padding: var(--panel-padding);
   }
 }
 

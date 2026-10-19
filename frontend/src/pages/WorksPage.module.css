@@ -5,21 +5,100 @@
   padding: 0 var(--page-padding) var(--space-10);
 }
 
-.grid {
+.state {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.retry {
+  display: flex;
+}
+
+.grid,
+.skeletonGrid {
   display: grid;
   gap: var(--grid-gap);
   margin-top: var(--space-6);
 }
 
+.skeletonGrid {
+  margin-top: 0;
+}
+
+.skeletonCard {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-panel);
+  overflow: hidden;
+}
+
+.skeletonMedia {
+  display: block;
+  aspect-ratio: 16 / 10;
+  background:
+    linear-gradient(
+      100deg,
+      var(--color-image-bed) 20%,
+      var(--color-surface) 40%,
+      var(--color-image-bed) 60%
+    )
+    var(--color-image-bed);
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.4s var(--ease-standard) infinite;
+}
+
+.skeletonBody {
+  display: grid;
+  gap: var(--space-2);
+  min-height: 76px;
+  align-content: center;
+  padding: var(--space-4);
+}
+
+.skeletonLine,
+.skeletonLineShort {
+  display: block;
+  height: 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.skeletonLine {
+  width: 54%;
+}
+
+.skeletonLineShort {
+  width: 32%;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 120% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
+}
+
 /* 单列 → 768 起两列 → 1280 起三列（规范 §4.3）。 */
 @media (min-width: 768px) {
-  .grid {
+  .grid,
+  .skeletonGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1280px) {
-  .grid {
+  .grid,
+  .skeletonGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonMedia {
+    animation: none;
   }
 }
