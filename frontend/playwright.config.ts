@@ -26,5 +26,9 @@ export default defineConfig({
     url: 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      // E2E 必须显式启用开发 Mock；生产构建不会读取这个开关。
+      VITE_ENABLE_MOCKS: 'true',
+    },
   },
 })

@@ -1,8 +1,10 @@
 .item {
   display: flex;
+  min-width: 0;
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -11,13 +13,10 @@
   background: var(--color-panel);
   overflow: hidden;
   transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
     background-color var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard);
-}
-
-.card:hover {
-  border-color: var(--color-border-hover);
-  background: var(--color-surface-hover);
 }
 
 /* 固定 16:10 画面区：图片加载不推动标题（规范 §5.1）。 */
@@ -27,23 +26,48 @@
   place-items: center;
   aspect-ratio: 16 / 10;
   background: var(--color-image-bed);
+  overflow: hidden;
 }
 
 .image {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
-.placeholder {
+.fallback {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
+  text-align: center;
+}
+
+/* 中性“不可用”标记，不画建筑轮廓，不冒充封面或模型。 */
+.fallbackMark {
+  position: relative;
+  width: 32px;
+  height: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+
+.fallbackMark::after {
+  position: absolute;
+  inset: 4px;
+  border-top: 1px solid var(--color-line);
+  content: '';
+  transform: rotate(-18deg) translateY(7px);
 }
 
 .body {
   display: grid;
   gap: var(--space-1);
+  min-height: 76px;
   padding: var(--space-4);
 }
 
@@ -52,12 +76,32 @@
   font-size: var(--text-heading);
   line-height: var(--leading-heading);
   font-weight: var(--weight-heading);
+  overflow-wrap: anywhere;
 }
 
 .city {
   color: var(--color-text-secondary);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
+}
+
+/* 指针悬停才抬起；触屏不保留悬停态，改用按压反馈（动效设计 §2）。 */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--color-border-hover);
+    background: var(--color-surface-hover);
+    box-shadow: 0 12px 32px var(--color-shadow);
+    transform: translateY(-3px);
+  }
+
+  .card:hover .image {
+    transform: scale(1.025);
+  }
+}
+
+.card:active {
+  border-color: var(--color-border-hover);
+  transform: scale(0.995);
 }
 
 /* 冷银短角标只标当前选中，不沿建筑轮廓描线（规范 §2.1、§5.1）。 */
@@ -83,4 +127,17 @@
     linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 1px 8px no-repeat,
     linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 8px 1px no-repeat,
     linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 1px 8px no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .image {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:active,
+  .card:hover .image {
+    transform: none;
+  }
 }

@@ -1,14 +1,30 @@
-import { render, screen } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import RouteError from '../../src/app/RouteError'
+import { queryKeys } from '../../src/api/queryKeys'
+import { createQueryClient } from '../../src/app/queryClient'
 import { routes } from '../../src/app/routes'
+import { server } from '../../src/mocks/node'
+import { resetMockState, setMockScenario } from '../../src/mocks/scenario'
 
-const renderAt = (path: string) => {
+const renderAt = (path: string, client = createQueryClient()) => {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  render(<RouterProvider router={router} />)
+  render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
   return router
 }
+
+beforeAll(() => server.listen({ onUnhandledFrame: 'bypass' }))
+afterEach(() => {
+  server.resetHandlers()
+  resetMockState()
+})
+afterAll(() => server.close())
 
 describe('首期路由表', () => {
   it('首页渲染空间入口标题', async () => {
@@ -16,15 +32,42 @@ describe('首期路由表', () => {
     expect(await screen.findByRole('heading', { name: '从城市进入建筑模型' })).toBeVisible()
   })
 
-  it('/works 直接访问可进入目录页', async () => {
+  it('/works 读取已发布作品并渲染卡片', async () => {
     renderAt('/works')
     expect(await screen.findByRole('heading', { name: '全部作品' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: '院落模型' })).toBeVisible()
+    const cards = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.startsWith('/works/'))
+    expect(cards).toHaveLength(10)
   })
 
   it('/works/:id 携带作品编号进入详情页', async () => {
-    renderAt('/works/demo-001')
-    expect(await screen.findByRole('heading', { name: '作品详情' })).toBeVisible()
-    expect(screen.getByText(/demo-001/)).toBeVisible()
+    renderAt('/works/work_demo_001')
+    const title = await screen.findByRole('heading', { name: '院落模型' })
+    await waitFor(() => expect(title).toBeVisible(), { timeout: 3000 })
+    const introHeading = screen.getByRole('heading', { name: '建筑介绍' })
+    await waitFor(() => expect(introHeading).toBeVisible(), { timeout: 3000 })
+  })
+
+  it('缓存详情后台重取返回 404 后移除旧作品信息与观看器', async () => {
+    const client = createQueryClient()
+    renderAt('/works/work_demo_001', client)
+    await screen.findByRole('heading', { name: '院落模型' })
+    fireEvent.click(screen.getByRole('button', { name: '开始预览' }))
+    expect(screen.getByText('正在准备预览')).toBeVisible()
+
+    setMockScenario('empty')
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: queryKeys.works.detail('work_demo_001') })
+    })
+
+    const notFound = await screen.findByRole('heading', { name: '作品不存在' })
+    expect(notFound).toHaveFocus()
+    expect(screen.queryByRole('heading', { name: '院落模型' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '开始预览' })).toBeNull()
+    expect(screen.queryByRole('region', { name: '模型观看区' })).toBeNull()
+    expect(screen.queryByText('正在准备预览')).toBeNull()
   })
 
   it('/admin/works/:id/edit 携带作品编号进入编辑页', async () => {
