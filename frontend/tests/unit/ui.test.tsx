@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { PublicNav } from '../../src/components/layouts/PublicNav'
@@ -86,12 +86,12 @@ describe('WorkCard', () => {
   it('整卡只有一个链接，未填城市显示统一文案', () => {
     withRouter(
       <ul>
-        <WorkCard href="/works/demo-001" title="院落模型" cityName={null} />
+        <WorkCard workId="work_demo_001" href="/works/work_demo_001" title="院落模型" cityName={null} />
       </ul>,
     )
 
     expect(screen.getAllByRole('link')).toHaveLength(1)
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/works/demo-001')
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/works/work_demo_001')
     expect(screen.getByRole('heading', { name: '院落模型' })).toBeVisible()
     expect(screen.getByText('未设置城市')).toBeVisible()
   })
@@ -99,12 +99,44 @@ describe('WorkCard', () => {
   it('已有城市时显示城市名', () => {
     withRouter(
       <ul>
-        <WorkCard href="/works/demo-002" title="长城模型" cityName="北京市（演示）" />
+        <WorkCard workId="work_demo_002" href="/works/work_demo_002" title="长城模型" cityName="北京市（演示）" />
       </ul>,
     )
 
     expect(screen.getByText('北京市（演示）')).toBeVisible()
     expect(screen.queryByText('未设置城市')).toBeNull()
+  })
+
+  it('封面加载失败时给出非模型替代，不保留破图', () => {
+    const { container } = withRouter(
+      <ul>
+        <WorkCard
+          workId="work_demo_001"
+          href="/works/work_demo_001"
+          title="院落模型"
+          coverUrl="/mock/cover-missing.png"
+        />
+      </ul>,
+    )
+
+    fireEvent.error(container.querySelector('img') as HTMLImageElement)
+    expect(screen.getByText('封面暂不可用')).toBeVisible()
+    expect(container.querySelector('img')).toBeNull()
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+  })
+
+  it('无封面地址时显示“暂无封面”，仍可进入详情', () => {
+    withRouter(
+      <ul>
+        <WorkCard workId="work_demo_003" href="/works/work_demo_003" title="丘陵模型" coverUrl={null} />
+      </ul>,
+    )
+
+    expect(screen.getByText('暂无封面')).toBeVisible()
+    expect(screen.getByRole('link', { name: /丘陵模型/ })).toHaveAttribute(
+      'href',
+      '/works/work_demo_003',
+    )
   })
 })
 

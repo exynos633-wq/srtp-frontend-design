@@ -1,5 +1,6 @@
 import { appConfig } from '../app/env'
 import { markMocksActive } from '../app/mocksStatus'
+import type { MockScenario } from './scenario'
 
 /**
  * Mock 启用规则（可测试的纯函数）：
@@ -20,14 +21,21 @@ export async function startMocksIfEnabled(): Promise<boolean> {
   if (!shouldEnableMocks({ dev: true, flag: appConfig.enableMocks })) return false
 
   // 动态引入：生产构建不把 MSW 与示例数据打进主包。
-  const [{ worker }, { installMockControls }, { getMockScenario }] = await Promise.all([
+  const [{ worker }, { installMockControls }, scenario] = await Promise.all([
     import('./browser'),
     import('./controls'),
     import('./scenario'),
   ])
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true })
+
+  // 演示页可用 ?mockScenario=empty 直接进入指定场景；仅开发 Mock 读取，生产构建不可达。
+  const requested = new URLSearchParams(window.location.search).get('mockScenario')
+  if (requested && scenario.MOCK_SCENARIOS.some((item) => item.id === requested)) {
+    scenario.setMockScenario(requested as MockScenario)
+  }
+
   markMocksActive()
   installMockControls()
-  console.info(`[mock] 已启用开发 Mock（场景：${getMockScenario()}）。数据仅存于内存，刷新即重置。`)
+  console.info(`[mock] 已启用开发 Mock（场景：${scenario.getMockScenario()}）。数据仅存于内存，刷新即重置。`)
   return true
 }

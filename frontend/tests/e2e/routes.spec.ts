@@ -5,12 +5,12 @@ import { expect, test } from '@playwright/test'
 const routes = [
   { path: '/', heading: '从城市进入建筑模型' },
   { path: '/works', heading: '全部作品' },
-  { path: '/works/demo-001', heading: '作品详情' },
+  { path: '/works/work_demo_001', heading: '院落模型' },
   { path: '/admin/login', heading: '管理员登录' },
   { path: '/admin/works', heading: '作品管理' },
   { path: '/admin/works/new', heading: '新建作品' },
-  { path: '/admin/works/demo-001/edit', heading: '编辑作品' },
-  { path: '/admin/works/demo-001/preview', heading: '管理员预览' },
+  { path: '/admin/works/work_demo_001/edit', heading: '编辑作品' },
+  { path: '/admin/works/work_demo_001/preview', heading: '管理员预览' },
   { path: '/no-such-page', heading: '页面不存在' },
 ]
 
