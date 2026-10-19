@@ -68,6 +68,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
   let response: Response
+  let text: string
   try {
     response = await fetch(joinUrl(appConfig.apiBaseUrl, path), {
       method,
@@ -77,6 +78,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     })
+    if (response.status === 204) return undefined as T
+    text = await response.text()
   } catch (error) {
     // 主动取消原样抛出，交给 React Query 识别，不当成网络故障。
     if (error instanceof DOMException && error.name === 'AbortError') throw error
@@ -86,9 +89,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     })
   }
 
-  if (response.status === 204) return undefined as T
-
-  const text = await response.text()
   let payload: unknown
   if (text.length > 0) {
     try {

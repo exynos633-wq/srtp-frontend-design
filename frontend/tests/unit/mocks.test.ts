@@ -1,6 +1,6 @@
 import { HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { getAdminWork, listAdminWorks, publishAdminWork, unpublishAdminWork, updateAdminWork } from '../../src/api/adminWorks'
+import { createAdminWork, getAdminWork, listAdminWorks, publishAdminWork, unpublishAdminWork, updateAdminWork } from '../../src/api/adminWorks'
 import { login } from '../../src/api/auth'
 import { listCityWorks, listGlobeCities } from '../../src/api/globe'
 import { ApiError } from '../../src/api/http'
@@ -131,6 +131,45 @@ describe('场景与错误语义', () => {
 })
 
 describe('写入语义（cityId 省略／null、发布与资源占用）', () => {
+  it.each([
+    ['asset_mock_model', 'glb'],
+    ['asset_mock_gaussian_ply', 'gaussian-ply'],
+  ] as const)('新建草稿保留资源 %s，读取和发布均使用原绑定', async (modelAssetId, modelFormat) => {
+    await login({ username: 'admin', password: 'admin' })
+    const created = await createAdminWork({
+      name: '新建作品',
+      description: '建筑介绍。',
+      modelAssetId,
+      coverAssetId: 'asset_mock_cover',
+    })
+    const expected = {
+      modelAssetId,
+      coverAssetId: 'asset_mock_cover',
+      modelFormat,
+      coverUrl: '/mock/placeholder-cover.svg',
+      status: 'draft',
+    }
+    expect(created).toMatchObject(expected)
+    expect(await getAdminWork(created.id)).toMatchObject(expected)
+    await expectApiError(getPublicWork(created.id), 404, 'WORK_NOT_FOUND')
+
+    const published = await publishAdminWork(created.id)
+    expect(published.status).toBe('published')
+    expect(await getPublicWork(created.id)).toMatchObject({ modelFormat, coverUrl: expected.coverUrl })
+  })
+
+  it.each([{}, { modelAssetId: null, coverAssetId: null }])('新建草稿允许资源缺省或清空：%j', async (resources) => {
+    await login({ username: 'admin', password: 'admin' })
+    const created = await createAdminWork(resources)
+    expect(created).toMatchObject({
+      status: 'draft',
+      modelAssetId: null,
+      coverAssetId: null,
+      modelFormat: null,
+      coverUrl: null,
+    })
+  })
+
   it('cityId 省略不修改，显式 null 清空', async () => {
     await login({ username: 'admin', password: 'admin' })
     const before = await getAdminWork('work_demo_001')

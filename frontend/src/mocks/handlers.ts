@@ -168,6 +168,8 @@ export const handlers = [
     const description = hasOwn(body, 'description') && typeof body.description === 'string' ? body.description : ''
     const modelingNote = hasOwn(body, 'modelingNote') && typeof body.modelingNote === 'string' ? body.modelingNote : null
     const cityId = hasOwn(body, 'cityId') && typeof body.cityId === 'string' ? body.cityId : null
+    const modelAssetId = typeof body.modelAssetId === 'string' ? body.modelAssetId : null
+    const coverAssetId = typeof body.coverAssetId === 'string' ? body.coverAssetId : null
     if (cityId !== null && !getDatabase().cities.some((city) => city.id === cityId)) {
       return fail(422, 'VALIDATION_FAILED', '城市不存在。', { cityId: '城市不存在或已停用。' })
     }
@@ -178,13 +180,13 @@ export const handlers = [
       name,
       cityId,
       city: city && province ? { id: city.id, name: city.name, province } : null,
-      coverUrl: null,
-      modelFormat: null,
+      coverUrl: coverAssetId === null ? null : '/mock/placeholder-cover.svg',
+      modelFormat: modelAssetId === null ? null : inferFormat(modelAssetId),
       description,
       modelingNote,
       status: 'draft',
-      modelAssetId: null,
-      coverAssetId: null,
+      modelAssetId,
+      coverAssetId,
       updatedAt: nextTimestamp(),
       publishedAt: null,
       placeholder: false,
