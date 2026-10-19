@@ -38,7 +38,8 @@ export function canUseCoverSource(source: CoverSource, target: DOMRect): boolean
   }
   const sourceAspect = rect.width / rect.height
   const targetAspect = target.width / target.height
-  return Math.abs(sourceAspect - targetAspect) / targetAspect < 0.08
+  // 城市气泡的方形缩略图与详情 16:10 封面是同一封面的可衔接裁剪。
+  return Math.abs(sourceAspect - targetAspect) / targetAspect < 0.4
 }
 
 export function runCoverTransition({
@@ -78,7 +79,7 @@ export function runCoverTransition({
   image.src = coverUrl
   image.alt = ''
   image.draggable = false
-  image.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;'
+  image.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;'
 
   layer.append(image)
   document.body.append(mask, layer)

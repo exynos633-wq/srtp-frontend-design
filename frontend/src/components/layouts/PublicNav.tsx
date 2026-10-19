@@ -13,11 +13,18 @@ const navItems = [
  * 公开端导航。
  * - <768：品牌行 56 + 导航行 44，两行实色。
  * - ≥768：单行 72，导航居中。
- * - 首页叠在场景上时可用玻璃（#080D12EB + 12px 模糊）；当前首页尚无场景，统一实色。
+ * - 首页叠在场景上时使用玻璃（#080D12EB + 12px 模糊）；其他页保持实色。
  */
-export function PublicNav() {
+interface PublicNavProps {
+  overlay?: boolean
+}
+
+export function PublicNav({ overlay = false }: PublicNavProps) {
   return (
-    <header className={styles.header}>
+    <header
+      className={classNames(styles.header, overlay && styles.overlay)}
+      data-public-nav="true"
+    >
       <div className={styles.bar}>
         <Link className={styles.brand} to="/">
           {appConfig.appName}
