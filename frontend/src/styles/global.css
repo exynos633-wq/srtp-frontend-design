@@ -1,0 +1,44 @@
+/* P01 基线样式：只保证占位页在深色背景下可读。
+   正式深色设计变量（色板、字号、间距、圆角、玻璃与状态色）在 P02 建立，届时整体替换本文件。 */
+:root {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #080d12;
+  color: #ebf2f5;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC',
+    'Source Han Sans SC', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 0.9375em;
+}
+
+a {
+  color: #54c8c1;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #8fe1db;
+  outline-offset: 2px;
+}
