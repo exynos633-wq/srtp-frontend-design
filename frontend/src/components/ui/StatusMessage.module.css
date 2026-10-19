@@ -1,0 +1,29 @@
+.message {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid currentColor;
+  border-radius: var(--radius-control);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.info {
+  border-left-color: var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.error {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}

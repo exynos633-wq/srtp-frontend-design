@@ -1,8 +1,6 @@
-/* P01 基线样式：只保证占位页在深色背景下可读。
-   正式深色设计变量（色板、字号、间距、圆角、玻璃与状态色）在 P02 建立，届时整体替换本文件。 */
-:root {
-  color-scheme: dark;
-}
+@import "./tokens.css";
+
+/* 基础重置与全站基线。局部视觉由各组件 CSS Modules 负责。 */
 
 *,
 *::before,
@@ -10,35 +8,82 @@
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: #080d12;
-  color: #ebf2f5;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC',
-    'Source Han Sans SC', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-body);
+  text-rendering: optimizeLegibility;
 }
 
-code {
-  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
-  font-size: 0.9375em;
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
 }
 
 a {
-  color: #54c8c1;
+  color: inherit;
+  text-decoration: none;
 }
 
-a:focus-visible,
-button:focus-visible {
-  outline: 2px solid #8fe1db;
-  outline-offset: 2px;
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9375em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* 焦点：2 px 深色间隔 + 2 px 焦点线，外侧可见（规范 §2.6、§7.1）。 */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-focus-gap),
+    0 0 0 4px var(--color-focus);
+}
+
+/* 不支持 :focus-visible 时保留系统焦点框，避免无焦点提示。 */
+@supports not selector(:focus-visible) {
+  :where(a, button, input, select, textarea, [tabindex]):focus {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+::selection {
+  background: var(--color-selected);
+  color: var(--color-text);
+}
+
+#root {
+  min-height: 100vh;
 }

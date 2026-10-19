@@ -1,0 +1,19 @@
+.skip {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: calc(var(--z-nav) + 1);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  transform: translateY(-200%);
+}
+
+.skip:focus-visible {
+  transform: translateY(0);
+}

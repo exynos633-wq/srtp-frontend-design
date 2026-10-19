@@ -1,0 +1,83 @@
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.labelRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.label {
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+}
+
+/* 必填用文字表达，不用只有颜色的星号（规范 §5.3）。 */
+.required {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+}
+
+.control {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.control::placeholder {
+  color: var(--color-text-muted);
+}
+
+.control:hover:not(:disabled):not([aria-invalid='true']) {
+  border-color: var(--color-border-hover);
+}
+
+.control[aria-invalid='true'] {
+  border-color: var(--color-error-text);
+}
+
+.control:disabled {
+  border-color: var(--color-disabled-border);
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.textarea {
+  min-height: 120px;
+  padding: var(--space-3);
+  line-height: var(--leading-body);
+  resize: vertical;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+/* 错误说明用已检查的语义色配对（规范 §2.5）。 */
+.error {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}

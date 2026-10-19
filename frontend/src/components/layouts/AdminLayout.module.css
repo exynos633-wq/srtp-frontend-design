@@ -4,47 +4,85 @@
   min-height: 100vh;
 }
 
+/* 后台与工作界面使用实色，不用玻璃（规范 §2.2）。 */
 .header {
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #2a3e4b;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--page-padding);
 }
 
 .brand {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+}
+
+.brandTag {
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
 }
 
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
-.navLink {
-  color: #a8bac4;
-  font-size: 14px;
-  text-decoration: none;
+.link {
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  transition: color var(--dur-base) var(--ease-standard);
 }
 
-.navLinkActive {
-  color: #54c8c1;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
+.link:hover {
+  color: var(--color-text);
+}
+
+.active {
+  color: var(--color-accent);
 }
 
 .main {
   flex: 1;
-  padding: 32px 16px;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--page-padding) var(--space-10);
 }
 
-.loading {
-  margin: 0;
-  color: #a8bac4;
+.main:focus {
+  outline: none;
+}
+
+.fallback {
+  padding-top: var(--space-8);
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 768px) {
+  .bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--nav-height);
+  }
+
+  .main {
+    padding-top: var(--space-2);
+  }
 }

@@ -11,9 +11,9 @@ const renderAt = (path: string) => {
 }
 
 describe('首期路由表', () => {
-  it('首页渲染开发占位', async () => {
+  it('首页渲染空间入口标题', async () => {
     renderAt('/')
-    expect(await screen.findByRole('heading', { name: '首页 · 地图探索' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: '从城市进入建筑模型' })).toBeVisible()
   })
 
   it('/works 直接访问可进入目录页', async () => {
@@ -47,7 +47,7 @@ describe('首期路由表', () => {
 
   it('未知地址显示 404', async () => {
     renderAt('/no-such-page')
-    expect(await screen.findByRole('heading', { name: '页面不存在（404）' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: '页面不存在' })).toBeVisible()
   })
 })
 
