@@ -90,6 +90,12 @@ describe('Mock 数据派生', () => {
   it('城市气泡返回该城已发布模型；未知城市 404', async () => {
     const response = await listCityWorks('110100')
     expect(response.items).toHaveLength(3)
+    // 城市引用必须可直接显示，不能只回编号。
+    expect(response.city).toMatchObject({
+      id: '110100',
+      name: '北京市',
+      province: { id: '110000', name: '北京市' },
+    })
     await expectApiError(listCityWorks('999999'), 404, 'CITY_NOT_FOUND')
   })
 })
@@ -172,6 +178,54 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     await login({ username: 'admin', password: 'admin' })
     setMockScenario('model-in-use')
     await expectApiError(updateAdminWork('work_demo_001', { modelAssetId: 'asset_new' }), 409, 'MODEL_IN_USE')
+  })
+
+  it('422 校验失败时不留下部分修改', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const before = await getAdminWork('work_demo_001')
+
+    // 名称先通过校验、城市随后失败：旧实现会把名称写进去。
+    await expectApiError(
+      updateAdminWork('work_demo_001', { name: '失败也要保持原样', cityId: 'not-a-city' }),
+      422,
+      'VALIDATION_FAILED',
+    )
+
+    const after = await getAdminWork('work_demo_001')
+    expect(after.name).toBe(before.name)
+    expect(after.updatedAt).toBe(before.updatedAt)
+  })
+
+  it('409 资源占用时不留下部分修改', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const before = await getAdminWork('work_demo_001')
+
+    setMockScenario('model-in-use')
+    await expectApiError(
+      updateAdminWork('work_demo_001', { name: '不该写入的名称', modelAssetId: 'asset_new' }),
+      409,
+      'MODEL_IN_USE',
+    )
+
+    const after = await getAdminWork('work_demo_001')
+    expect(after.name).toBe(before.name)
+    expect(after.modelAssetId).toBe(before.modelAssetId)
+  })
+
+  it('已发布作品保存后仍要满足发布条件', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const before = await getAdminWork('work_demo_001')
+
+    const error = await expectApiError(
+      updateAdminWork('work_demo_001', { description: '' }),
+      422,
+      'VALIDATION_FAILED',
+    )
+    expect(error.fields).toMatchObject({ description: expect.any(String) })
+
+    const after = await getAdminWork('work_demo_001')
+    expect(after.status).toBe('published')
+    expect(after.description).toBe(before.description)
   })
 
   it('下架后公开端立即读不到', async () => {

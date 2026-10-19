@@ -58,6 +58,16 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== ''
 }
 
+/** 发布必填校验：发布接口与“已发布作品保存”共用同一套规则。 */
+function publishFieldErrors(work: MockWork): Record<string, string> {
+  const fields: Record<string, string> = {}
+  if (!isNonEmptyString(work.name)) fields.name = '请填写作品名称。'
+  if (!isNonEmptyString(work.description)) fields.description = '请填写建筑介绍。'
+  if (!isNonEmptyString(work.coverAssetId)) fields.coverAssetId = '请上传封面。'
+  if (!isNonEmptyString(work.modelAssetId)) fields.modelAssetId = '请上传可用的模型资源。'
+  return fields
+}
+
 /** 资源格式在真实后端由上传结果决定；Mock 只在已有格式缺失时按编号推断。 */
 function inferFormat(assetId: string): ModelFormat {
   return /ply|gaussian/i.test(assetId) ? 'gaussian-ply' : 'glb'
@@ -97,8 +107,11 @@ export const handlers = [
     const scenario = getMockScenario()
     if (scenario === 'list-failure') return fail(500, 'INTERNAL_ERROR', '读取城市作品失败。')
     const items = listCityWorks(cityId)
-    if (items === null) return fail(404, 'CITY_NOT_FOUND', '城市不存在。')
-    return HttpResponse.json({ city: { id: cityId }, items })
+    // 城市引用由字典派生，响应里必须带可显示的名称与省份，不能只回编号。
+    const city = getDatabase().cities.find((item) => item.id === cityId)
+    const province = city ? getDatabase().provinces.find((item) => item.id === city.provinceId) : undefined
+    if (items === null || !city || !province) return fail(404, 'CITY_NOT_FOUND', '城市不存在。')
+    return HttpResponse.json({ city: { id: city.id, name: city.name, province }, items })
   }),
 
   http.post(/\/api\/auth\/login$/, async ({ request }) => {
@@ -196,27 +209,31 @@ export const handlers = [
     const body = await readJson(request)
     if (!body) return fail(422, 'VALIDATION_FAILED', '请求体格式不正确。')
 
+    // 先在副本上应用字段并完成全部校验，成功后再一次性写回；
+    // 否则后面的校验失败时，前面的赋值已经生效，会出现“提示保存失败但数据已变”。
+    const next: MockWork = { ...work }
+
     if (hasOwn(body, 'name')) {
       if (typeof body.name !== 'string') return fail(422, 'VALIDATION_FAILED', '名称格式不正确。', { name: '名称必须是文本。' })
-      work.name = body.name
+      next.name = body.name
     }
     if (hasOwn(body, 'description')) {
       if (typeof body.description !== 'string') {
         return fail(422, 'VALIDATION_FAILED', '建筑介绍格式不正确。', { description: '建筑介绍必须是文本。' })
       }
-      work.description = body.description
+      next.description = body.description
     }
     if (hasOwn(body, 'modelingNote')) {
       if (body.modelingNote !== null && typeof body.modelingNote !== 'string') {
         return fail(422, 'VALIDATION_FAILED', '建模说明格式不正确。', { modelingNote: '建模说明必须是文本或清空。' })
       }
-      work.modelingNote = body.modelingNote
+      next.modelingNote = body.modelingNote
     }
     if (hasOwn(body, 'cityId')) {
       const cityId = body.cityId
       if (cityId === null) {
-        work.cityId = null
-        work.city = null
+        next.cityId = null
+        next.city = null
       } else if (typeof cityId !== 'string') {
         return fail(422, 'VALIDATION_FAILED', '城市编号格式不正确。', { cityId: '城市编号必须是文本或 null。' })
       } else {
@@ -225,8 +242,8 @@ export const handlers = [
         if (!city || !province) {
           return fail(422, 'VALIDATION_FAILED', '城市不存在。', { cityId: '城市不存在或已停用。' })
         }
-        work.cityId = city.id
-        work.city = { id: city.id, name: city.name, province }
+        next.cityId = city.id
+        next.city = { id: city.id, name: city.name, province }
       }
     }
     if (hasOwn(body, 'modelAssetId')) {
@@ -236,20 +253,29 @@ export const handlers = [
       if (body.modelAssetId !== null && typeof body.modelAssetId !== 'string') {
         return fail(422, 'VALIDATION_FAILED', '模型资源格式不正确。', { modelAssetId: '模型资源编号必须是文本。' })
       }
-      work.modelAssetId = body.modelAssetId
-      if (typeof body.modelAssetId === 'string' && work.modelFormat === null) {
-        work.modelFormat = inferFormat(body.modelAssetId)
+      next.modelAssetId = body.modelAssetId
+      if (typeof body.modelAssetId === 'string' && next.modelFormat === null) {
+        next.modelFormat = inferFormat(body.modelAssetId)
       }
     }
     if (hasOwn(body, 'coverAssetId')) {
       if (body.coverAssetId !== null && typeof body.coverAssetId !== 'string') {
         return fail(422, 'VALIDATION_FAILED', '封面资源格式不正确。', { coverAssetId: '封面资源编号必须是文本。' })
       }
-      work.coverAssetId = body.coverAssetId
-      work.coverUrl = body.coverAssetId === null ? null : '/mock/placeholder-cover.svg'
+      next.coverAssetId = body.coverAssetId
+      next.coverUrl = body.coverAssetId === null ? null : '/mock/placeholder-cover.svg'
     }
 
-    work.updatedAt = nextTimestamp()
+    // 已发布作品保存后仍需满足发布条件，否则会从公开端消失而后台仍显示已发布。
+    if (next.status === 'published') {
+      const fields = publishFieldErrors(next)
+      if (Object.keys(fields).length > 0) {
+        return fail(422, 'VALIDATION_FAILED', '已发布作品必须保留名称、建筑介绍、封面与模型资源。', fields)
+      }
+    }
+
+    next.updatedAt = nextTimestamp()
+    Object.assign(work, next)
     return HttpResponse.json(toWriteResult(work))
   }),
 
@@ -262,11 +288,7 @@ export const handlers = [
       return fail(422, 'VALIDATION_FAILED', '发布前请补全必填内容。', { description: '建筑介绍不能为空。' })
     }
 
-    const fields: Record<string, string> = {}
-    if (!isNonEmptyString(work.name)) fields.name = '请填写作品名称。'
-    if (!isNonEmptyString(work.description)) fields.description = '请填写建筑介绍。'
-    if (!isNonEmptyString(work.coverAssetId)) fields.coverAssetId = '请上传封面。'
-    if (!isNonEmptyString(work.modelAssetId)) fields.modelAssetId = '请上传可用的模型资源。'
+    const fields = publishFieldErrors(work)
     if (Object.keys(fields).length > 0) return fail(422, 'VALIDATION_FAILED', '发布前请补全必填内容。', fields)
 
     work.status = 'published'
