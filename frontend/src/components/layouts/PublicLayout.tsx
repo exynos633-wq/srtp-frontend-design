@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { Outlet } from 'react-router'
+import { MockBadge } from '../../mocks/MockBadge'
 import { SkipLink } from '../ui/SkipLink'
 import { PublicNav } from './PublicNav'
 import styles from './PublicLayout.module.css'
@@ -22,6 +23,7 @@ export default function PublicLayout() {
         </Suspense>
       </main>
       <footer className={styles.footer}>
+        <MockBadge />
         演示阶段 · 作品数据、认证、模型渲染与 AI 助手尚未接入
       </footer>
     </div>

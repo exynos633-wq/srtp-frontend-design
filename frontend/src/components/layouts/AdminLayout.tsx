@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { appConfig } from '../../app/env'
 import { classNames } from '../../lib/classNames'
+import { MockBadge } from '../../mocks/MockBadge'
 import { SkipLink } from '../ui/SkipLink'
 import styles from './AdminLayout.module.css'
 
@@ -37,6 +38,7 @@ export default function AdminLayout() {
               </NavLink>
             </nav>
           )}
+          <MockBadge />
         </div>
       </header>
       <main id="main-content" className={styles.main} tabIndex={-1}>

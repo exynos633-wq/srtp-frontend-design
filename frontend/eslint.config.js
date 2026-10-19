@@ -7,7 +7,17 @@ import tseslint from 'typescript-eslint'
 // 代码检查按工程设计/04 使用 ESLint + TypeScript 检查。
 // 只检查源码与测试，不引入额外规则集或风格工具。
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage', 'playwright-report', 'test-results'] },
+  // public/mockServiceWorker.js 由 `msw init` 生成，不参与项目代码风格检查。
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'public/mockServiceWorker.js',
+    ],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

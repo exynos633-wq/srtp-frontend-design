@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="演示封面占位">
+  <rect width="800" height="500" fill="#20272b" />
+  <g fill="none" stroke="#2a3e4b" stroke-width="2">
+    <rect x="0.5" y="0.5" width="799" height="499" />
+  </g>
+  <text x="400" y="258" fill="#879ca8" font-family="system-ui, sans-serif" font-size="28" text-anchor="middle">
+    演示封面占位
+  </text>
+</svg>
