@@ -8,13 +8,16 @@
 
 | 项目 | 实测值 | 说明 |
 | --- | --- | --- |
-| Node.js | v24.15.0 | `package.json` 的 `engines` 为 `^20.19.0 \|\| >=22.12.0`（Vite 8 要求） |
+| Node.js | v24.15.0 | `engines` 为 `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`：取锁定依赖的共同支持范围（jsdom 30.1.3 与 vitest 5.0.5 不支持 Node 20／23／25，react-router 8 要求 ≥22.22.0）。版本文件见 `.nvmrc`，nvm-windows 用户可 `nvm use`。 |
 | npm | 11.12.1 | 锁文件为唯一的 `package-lock.json`，CI 使用 `npm ci` |
 | 已验证浏览器 | Chrome（本机安装版） | Firefox / Safari / 真机未验证 |
 
 Windows 注意：若 PowerShell 执行策略禁止 `npm.ps1`，请改用 `cmd /c npm ...` 或 `npm.cmd`。
 若沙箱或权限不允许写用户级 npm 缓存，可把缓存改到可写目录，例如
 `set npm_config_cache=F:\srtp网页\.npm-cache`（仅影响本机，不写入仓库）。
+
+`engines` 已按锁定依赖的共同支持范围收紧。启用 `engine-strict` 的机器请先按 `.nvmrc` 切到
+受支持版本（22.22.2 及以上 22.x、24.15 及以上 24.x、26 及以上），Node 20／23／25 不在支持范围。
 
 ## 常用命令
 
@@ -45,6 +48,7 @@ frontend/
 ├── tests/unit/       # Vitest + RTL
 ├── tests/e2e/        # Playwright
 ├── .env.example      # 公开配置示例
+├── .nvmrc            # 推荐的 Node 版本（24.15.0）
 └── playwright.config.ts / vite.config.ts / tsconfig*.json
 ```
 
