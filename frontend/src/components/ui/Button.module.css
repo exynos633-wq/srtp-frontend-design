@@ -1,0 +1,53 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--button-height);
+  padding: 0 var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.primary:hover:not(:disabled) {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+.primary:active:not(:disabled) {
+  border-color: var(--color-accent-active);
+  background: var(--color-accent-active);
+}
+
+.secondary {
+  border-color: var(--color-input-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+}
+
+/* 禁用是状态，不用整块降透明度；文字保持可读（规范 §2.5）。 */
+.button:disabled {
+  border-color: var(--color-disabled-border);
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}

@@ -1,0 +1,37 @@
+.hero {
+  display: grid;
+  gap: var(--space-4);
+  align-content: center;
+  width: 100%;
+  max-width: var(--content-max);
+  min-height: calc(100vh - var(--nav-height) - 120px);
+  margin: 0 auto;
+  padding: var(--space-10) var(--page-padding);
+}
+
+.eyebrow {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+}
+
+.title {
+  max-width: 20ch;
+  color: var(--color-text);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: var(--weight-title);
+}
+
+.lead {
+  max-width: 46ch;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+/* 首页短内容层不做宽卡片；状态说明跟随正文宽度。 */
+.hero > [role='status'] {
+  max-width: 46ch;
+}

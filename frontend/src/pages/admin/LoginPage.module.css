@@ -1,0 +1,28 @@
+.page {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--page-padding);
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--panel-padding);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-panel);
+}
+
+.title {
+  color: var(--color-text);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: var(--weight-title);
+}
+
+.intro {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}

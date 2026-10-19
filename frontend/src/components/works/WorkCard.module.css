@@ -1,0 +1,86 @@
+.item {
+  display: flex;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-panel);
+  overflow: hidden;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.card:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+}
+
+/* 固定 16:10 画面区：图片加载不推动标题（规范 §5.1）。 */
+.media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  background: var(--color-image-bed);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+}
+
+.title {
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+}
+
+.city {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+/* 冷银短角标只标当前选中，不沿建筑轮廓描线（规范 §2.1、§5.1）。 */
+.media[data-selected='true']::before,
+.media[data-selected='true']::after {
+  position: absolute;
+  inset: var(--space-2);
+  content: '';
+  pointer-events: none;
+}
+
+.media[data-selected='true']::before {
+  background:
+    linear-gradient(var(--color-silver), var(--color-silver)) left top / 8px 1px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) left top / 1px 8px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) right top / 8px 1px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) right top / 1px 8px no-repeat;
+}
+
+.media[data-selected='true']::after {
+  background:
+    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 8px 1px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 1px 8px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 8px 1px no-repeat,
+    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 1px 8px no-repeat;
+}
