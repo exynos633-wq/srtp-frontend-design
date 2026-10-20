@@ -384,13 +384,13 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
 
   const scheduleHoverClose = useCallback(() => {
     if (bubbleMode !== 'hover' || bubbleClosing) return
-    if (hoverCloseRef.current !== null) window.clearTimeout(hoverCloseRef.current)
+    clearHoverTimers()
     hoverCloseRef.current = window.setTimeout(() => {
       hoverCloseRef.current = null
       if (bubbleSectionRef.current?.contains(document.activeElement)) return
       closeBubble(false)
     }, 200)
-  }, [bubbleClosing, bubbleMode, closeBubble])
+  }, [bubbleClosing, bubbleMode, clearHoverTimers, closeBubble])
 
   const handlePointFocus = useCallback(
     (city: GlobeCity) => {
