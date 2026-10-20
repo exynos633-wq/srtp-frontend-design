@@ -21,12 +21,14 @@ import {
   MIN_LATITUDE,
   MIN_ZOOM,
   OPENING_VIEW,
-  FRONT_FACING_THRESHOLD,
   cameraDistanceForDiameter,
   clamp,
   globeDiameterForViewport,
   globeViewOffset,
+  inertiaTargetLongitude,
+  isPointFrontFacing,
   latLonToVector3,
+  nearestFrontPoint,
   normalizeLongitude,
   placeCityBubble,
   shortestLongitudeDelta,
@@ -341,18 +343,12 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
       const rect = stage.getBoundingClientRect()
       const x = clientX - rect.left
       const y = clientY - rect.top
-      let nearest: GlobeCity | null = null
-      let nearestDistance = 26
+      const candidates: Array<ScreenPoint & { city: GlobeCity }> = []
       for (const city of cities) {
         const point = screenPositionsRef.current.get(city.id)
-        if (!point?.front) continue
-        const distance = Math.hypot(point.x - x, point.y - y)
-        if (distance < nearestDistance) {
-          nearestDistance = distance
-          nearest = city
-        }
+        if (point) candidates.push({ city, ...point })
       }
-      return nearest
+      return nearestFrontPoint(candidates, x, y)?.city ?? null
     },
     [cities],
   )
@@ -727,7 +723,8 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
       const view = viewRef.current
       const proxy = { longitude: view.longitude, latitude: view.latitude }
       cameraTweenRef.current = gsap.to(proxy, {
-        longitude: normalizeLongitude(view.longitude - drag.lastDx * 0.2 * 4),
+        // 目标保持连续经度，跨 ±180° 时按实际方向插值，完成后再归一化。
+        longitude: inertiaTargetLongitude(view.longitude, drag.lastDx),
         latitude: clamp(view.latitude + drag.lastDy * 0.2 * 3, MIN_LATITUDE, MAX_LATITUDE),
         duration: 0.28,
         ease: 'power2.out',
@@ -1002,10 +999,7 @@ function SceneSync({
     () => cities.map((city) => latLonToVector3(city.center.latitude, city.center.longitude)),
     [cities],
   )
-  const temp = useMemo(
-    () => ({ point: new Vector3(), cameraDir: new Vector3() }),
-    [],
-  )
+  const temp = useMemo(() => ({ point: new Vector3() }), [])
 
   useLayoutEffect(() => {
     if (size.width === 0 || size.height === 0) return
@@ -1027,7 +1021,6 @@ function SceneSync({
     camera.lookAt(0, 0, 0)
     camera.updateMatrixWorld()
 
-    temp.cameraDir.copy(camera.position).normalize()
     screenPositionsRef.current.clear()
 
     for (let index = 0; index < cities.length; index += 1) {
@@ -1036,7 +1029,7 @@ function SceneSync({
       if (!element) continue
 
       const point = temp.point.copy(positions[index])
-      const front = point.dot(temp.cameraDir) > FRONT_FACING_THRESHOLD
+      const front = isPointFrontFacing(positions[index], camera.position)
       point.project(camera)
       const x = (point.x * 0.5 + 0.5) * size.width
       const y = (-point.y * 0.5 + 0.5) * size.height

@@ -9,8 +9,11 @@ import {
   clamp,
   globeDiameterForViewport,
   globeViewOffset,
+  inertiaTargetLongitude,
   isFrontFacing,
+  isPointFrontFacing,
   latLonToVector3,
+  nearestFrontPoint,
   normalizeLongitude,
   placeCityBubble,
   shortestLongitudeDelta,
@@ -49,6 +52,64 @@ describe('地球坐标与构图', () => {
   it('纬度被限制在可视范围内', () => {
     expect(clamp(90, MIN_LATITUDE, MAX_LATITUDE)).toBe(MAX_LATITUDE)
     expect(clamp(-90, MIN_LATITUDE, MAX_LATITUDE)).toBe(MIN_LATITUDE)
+  })
+})
+
+describe('拖拽惯性跨越日期变更线', () => {
+  it('向东跨过 +180° 时保持正的连续目标，完成后归一化', () => {
+    const from = 179
+    const target = inertiaTargetLongitude(from, -3)
+    expect(target).toBeCloseTo(181.4)
+    expect(target - from).toBeCloseTo(2.4)
+    expect(normalizeLongitude(target)).toBeCloseTo(-178.6)
+  })
+
+  it('向西跨过 -180° 时保持负的连续目标，完成后归一化', () => {
+    const from = -179
+    const target = inertiaTargetLongitude(from, 3)
+    expect(target).toBeCloseTo(-181.4)
+    expect(target - from).toBeCloseTo(-2.4)
+    expect(normalizeLongitude(target)).toBeCloseTo(178.6)
+  })
+})
+
+describe('透视相机可见性与命中', () => {
+  const cameraAt = (distance: number) => latLonToVector3(0, 90, distance)
+
+  it('近距离相机按真实地平线隐藏外侧点', () => {
+    const camera = cameraAt(3)
+    expect(isFrontFacing(0, 90, camera)).toBe(true)
+    expect(isFrontFacing(0, 155, camera)).toBe(true)
+    // 距离 3 时地平线约 70.53°：70° 仍可见，71° 已遮挡。
+    expect(isFrontFacing(0, 160, camera)).toBe(true)
+    expect(isFrontFacing(0, 161, camera)).toBe(false)
+    expect(isFrontFacing(0, 165, camera)).toBe(false)
+    expect(isPointFrontFacing(latLonToVector3(0, 165), camera)).toBe(false)
+  })
+
+  it('远距离相机放宽可见范围，但仍隐藏背面点', () => {
+    const camera = cameraAt(8)
+    expect(isFrontFacing(0, 165, camera)).toBe(true)
+    expect(isFrontFacing(0, 180, camera)).toBe(false)
+  })
+
+  it('相机位于球心时不把任何点当成正面', () => {
+    const camera = latLonToVector3(0, 90, 0)
+    expect(isFrontFacing(0, 90, camera)).toBe(false)
+  })
+
+  it('隐藏点不参与最近正面点选择', () => {
+    const hidden = { id: 'hidden', x: 100, y: 100, front: false }
+    const visible = { id: 'visible', x: 125, y: 100, front: true }
+    expect(nearestFrontPoint([hidden, visible], 102, 100)?.id).toBe('visible')
+    expect(nearestFrontPoint([hidden], 100, 100)).toBeNull()
+  })
+
+  it('地平线外的点即使投影位置最近也不能命中', () => {
+    const camera = cameraAt(3)
+    const occluded = { id: 'occluded', x: 100, y: 100, front: isFrontFacing(0, 165, camera) }
+    expect(occluded.front).toBe(false)
+    expect(nearestFrontPoint([occluded], 100, 100)).toBeNull()
   })
 })
 

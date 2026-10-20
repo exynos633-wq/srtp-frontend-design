@@ -8,8 +8,8 @@ export const MAX_ZOOM = 1.6
 export const ATMOSPHERE_SCALE = 1.028
 export const MIN_LATITUDE = -70
 export const MAX_LATITUDE = 70
-/** 背面点不参与命中；留一点余量，避免边缘点被当成正面。 */
-export const FRONT_FACING_THRESHOLD = 0.12
+/** 球面点积在可见地平线之外的极小余量，避免边缘点被当成正面。 */
+export const FRONT_FACING_THRESHOLD = 0.01
 
 export interface GlobeView {
   longitude: number
@@ -47,6 +47,14 @@ export function shortestLongitudeDelta(from: number, to: number): number {
   return ((((to - from + 540) % 360) + 360) % 360) - 180
 }
 
+/**
+ * 拖拽松手后的惯性目标保持连续经度；跨越 ±180° 时不在补间中途换向。
+ * 结果只在补间完成后归一化。
+ */
+export function inertiaTargetLongitude(longitude: number, lastDx: number): number {
+  return longitude - lastDx * 0.2 * 4
+}
+
 /** 与 Three.js SphereGeometry 默认 UV 对应的等距圆柱坐标。 */
 export function latLonToVector3(latitude: number, longitude: number, radius = 1): Vector3 {
   const phi = (90 - latitude) * DEG2RAD
@@ -58,15 +66,47 @@ export function latLonToVector3(latitude: number, longitude: number, radius = 1)
   )
 }
 
-/** 点是否位于朝向相机的一侧；背面点不能命中。 */
+/**
+ * 单位球面上的点 P 与相机 C：只有 P·C > 1 才位于相机可见的地平线内。
+ * 归一化相机方向会丢掉距离，透视相机必须按真实距离判断。
+ */
+export function isPointFrontFacing(
+  point: Vector3,
+  cameraPosition: Vector3,
+  threshold = FRONT_FACING_THRESHOLD,
+): boolean {
+  if (cameraPosition.lengthSq() < 1e-8) return false
+  return point.dot(cameraPosition) > 1 + threshold
+}
+
+/** 点是否位于朝向相机的一侧；背面与地平线外的点不能命中。 */
 export function isFrontFacing(
   latitude: number,
   longitude: number,
   cameraPosition: Vector3,
   threshold = FRONT_FACING_THRESHOLD,
 ): boolean {
-  if (cameraPosition.lengthSq() < 1e-8) return false
-  return latLonToVector3(latitude, longitude).dot(cameraPosition.clone().normalize()) > threshold
+  return isPointFrontFacing(latLonToVector3(latitude, longitude), cameraPosition, threshold)
+}
+
+/** 从投影点位中选最近的可命中点；隐藏点不参与指针命中。 */
+export function nearestFrontPoint<T extends { x: number; y: number; front: boolean }>(
+  points: Iterable<T>,
+  x: number,
+  y: number,
+  maxDistance = 26,
+): T | null {
+  let nearest: T | null = null
+  let nearestDistance = maxDistance
+  for (const point of points) {
+    if (!point.front) continue
+    const distance = Math.hypot(point.x - x, point.y - y)
+    if (distance < nearestDistance) {
+      nearestDistance = distance
+      nearest = point
+    }
+  }
+  return nearest
 }
 
 /**
