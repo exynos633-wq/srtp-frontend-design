@@ -106,7 +106,9 @@ export const handlers = [
   http.get(/\/api\/globe\/cities$/, () => {
     const scenario = getMockScenario()
     if (scenario === 'list-failure') return fail(500, 'INTERNAL_ERROR', '读取城市聚合失败。')
-    if (scenario === 'empty') return HttpResponse.json({ items: [] })
+    if (scenario === 'empty' || scenario === 'globe-empty') {
+      return HttpResponse.json({ items: [] })
+    }
     return HttpResponse.json({ items: listGlobeCities() })
   }),
 
@@ -114,11 +116,18 @@ export const handlers = [
     const cityId = String(params[0])
     const scenario = getMockScenario()
     if (scenario === 'list-failure') return fail(500, 'INTERNAL_ERROR', '读取城市作品失败。')
-    const items = listCityWorks(cityId)
     // 城市引用由字典派生，响应里必须带可显示的名称与省份，不能只回编号。
     const city = getDatabase().cities.find((item) => item.id === cityId)
     const province = city ? getDatabase().provinces.find((item) => item.id === city.provinceId) : undefined
-    if (items === null || !city || !province) return fail(404, 'CITY_NOT_FOUND', '城市不存在。')
+    if (!city || !province) return fail(404, 'CITY_NOT_FOUND', '城市不存在。')
+    if (scenario === 'city-list-failure') {
+      return fail(500, 'INTERNAL_ERROR', '读取城市作品失败。')
+    }
+    if (scenario === 'city-empty') {
+      return HttpResponse.json({ city: { id: city.id, name: city.name, province }, items: [] })
+    }
+    const items = listCityWorks(cityId)
+    if (items === null) return fail(404, 'CITY_NOT_FOUND', '城市不存在。')
     return HttpResponse.json({ city: { id: city.id, name: city.name, province }, items })
   }),
 

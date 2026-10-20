@@ -9,6 +9,11 @@
   min-width: 0;
 }
 
+/* 首页场景占满视口，滚动与裁切由场景页自己控制。 */
+.mainHome {
+  overflow: hidden;
+}
+
 /* 主区可被跳转入口聚焦，但不需要额外视觉标记。 */
 .main:focus {
   outline: none;
@@ -25,4 +30,8 @@
   color: var(--color-text-muted);
   font-size: var(--text-meta);
   line-height: var(--leading-meta);
+}
+
+.footerHidden {
+  display: none;
 }

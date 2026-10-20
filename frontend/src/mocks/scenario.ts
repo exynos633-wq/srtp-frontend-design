@@ -7,6 +7,9 @@ import { resetDatabase } from './db'
 export type MockScenario =
   | 'normal'
   | 'empty'
+  | 'globe-empty'
+  | 'city-empty'
+  | 'city-list-failure'
   | 'list-failure'
   | 'cover-failure'
   | 'auth-expired'
@@ -22,6 +25,21 @@ export interface MockScenarioInfo {
 export const MOCK_SCENARIOS: MockScenarioInfo[] = [
   { id: 'normal', label: '正常', description: '10 件已发布演示作品，另含草稿与下架测试夹具。' },
   { id: 'empty', label: '空', description: '公开列表与地球城市为空；管理数据仍在。' },
+  {
+    id: 'globe-empty',
+    label: '地球无点位',
+    description: '地球城市点位为空，但公开目录仍有已发布作品。',
+  },
+  {
+    id: 'city-empty',
+    label: '城市无作品',
+    description: '城市点位正常，打开气泡显示该城暂无已发布作品。',
+  },
+  {
+    id: 'city-list-failure',
+    label: '城市作品失败',
+    description: '城市聚合正常，打开气泡读取作品列表返回 500，可就地重试。',
+  },
   { id: 'list-failure', label: '读取失败', description: '公开读取接口返回 500，页面应显示失败而不是空列表。' },
   { id: 'cover-failure', label: '封面失败', description: '列表与详情正常返回，封面地址失效，页面显示不冒充模型的替代。' },
   { id: 'auth-expired', label: '登录失效', description: '管理接口返回 401，页面应提示重新登录。' },

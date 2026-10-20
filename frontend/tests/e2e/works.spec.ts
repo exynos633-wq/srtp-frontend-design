@@ -10,15 +10,32 @@ async function gotoDirectory(page: Page, query = '') {
 /** 在页面内观察共享封面转场的克隆，避免用固定等待猜测转场是否发生。 */
 async function installCoverProbe(page: Page) {
   await page.evaluate(() => {
+    interface CloneFacts {
+      ariaHidden: string | null
+      pointerEvents: string
+      interactive: number
+    }
     const target = window as unknown as {
       __coverCloneCount?: number
+      __coverCloneFacts?: CloneFacts | null
       __coverProbe?: MutationObserver
     }
     target.__coverCloneCount = 0
+    target.__coverCloneFacts = null
     target.__coverProbe?.disconnect()
     target.__coverProbe = new MutationObserver(() => {
       const count = document.querySelectorAll('body > div[aria-hidden="true"] img').length
       target.__coverCloneCount = Math.max(target.__coverCloneCount ?? 0, count)
+      if (target.__coverCloneFacts) return
+      const layer = [...document.querySelectorAll<HTMLElement>('body > div[aria-hidden="true"]')].find(
+        (element) => element.querySelector('img'),
+      )
+      if (!layer) return
+      target.__coverCloneFacts = {
+        ariaHidden: layer.getAttribute('aria-hidden'),
+        pointerEvents: getComputedStyle(layer).pointerEvents,
+        interactive: layer.querySelectorAll('a, button, [tabindex]').length,
+      }
     })
     target.__coverProbe.observe(document.body, { childList: true, subtree: true })
   })
@@ -154,18 +171,17 @@ test('目录到详情发生共享封面克隆，结束后不残留遮罩或克�
   await expect(page.getByText('建筑介绍')).toBeVisible()
 
   // 视觉代理只负责动画：对辅助技术隐藏、不接收指针，也不含可聚焦链接。
-  const cloneFacts = await page.waitForFunction(() => {
-    const layer = [...document.querySelectorAll<HTMLElement>('body > div[aria-hidden="true"]')].find(
-      (element) => element.querySelector('img'),
-    )
-    if (!layer) return null
-    return {
-      ariaHidden: layer.getAttribute('aria-hidden'),
-      pointerEvents: getComputedStyle(layer).pointerEvents,
-      interactive: layer.querySelectorAll('a, button, [tabindex]').length,
-    }
-  })
-  expect(await cloneFacts.jsonValue()).toEqual({
+  const cloneFacts = await page.evaluate(
+    () =>
+      (window as unknown as {
+        __coverCloneFacts?: {
+          ariaHidden: string | null
+          pointerEvents: string
+          interactive: number
+        } | null
+      }).__coverCloneFacts ?? null,
+  )
+  expect(cloneFacts).toEqual({
     ariaHidden: 'true',
     pointerEvents: 'none',
     interactive: 0,
