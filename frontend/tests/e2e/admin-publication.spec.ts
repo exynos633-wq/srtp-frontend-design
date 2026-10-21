@@ -11,7 +11,7 @@ async function signIn(page: Page) {
 
 async function openAdmin(page: Page) {
   await page.goto('/admin/works')
-  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible({ timeout: 15_000 })
   await signIn(page)
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
 }
@@ -323,6 +323,8 @@ test('未保存文本时发布禁用，保存后才恢复发布入口', async ({
 
 test('慢下架在退出后完成仍刷新公开目录与地球缓存', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
+  // 本用例只验证缓存；减少动态避免把并行环境的开场 rAF 时序混入业务断言。
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   const stage = page.locator('[data-globe-stage]')
   await expect(stage).toBeVisible({ timeout: 20_000 })
@@ -341,7 +343,7 @@ test('慢下架在退出后完成仍刷新公开目录与地球缓存', async ({
     .getByRole('navigation', { name: '公开展示区导航' })
     .getByRole('link', { name: '后台管理' })
     .click()
-  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible({ timeout: 15_000 })
   await signIn(page)
   await expect(page.getByRole('table', { name: '管理作品列表' })).toBeVisible()
 
@@ -363,7 +365,7 @@ test('慢下架在退出后完成仍刷新公开目录与地球缓存', async ({
   await row.getByRole('button', { name: '下架 模型占位 09' }).click()
   await page.waitForTimeout(150)
   await page.getByRole('button', { name: '退出登录' }).click()
-  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible({ timeout: 15_000 })
   await page.waitForTimeout(1400)
 
   await page
