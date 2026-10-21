@@ -48,7 +48,7 @@ test('会话失效、403保留路径，手动恢复', async ({ page }) => {
   await signIn(page)
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
   await page.evaluate(() => window.__mockControls?.setScenario('auth-expired'))
-  await page.getByRole('link', { name: '新建作品（P11 接入）' }).click()
+  await page.getByRole('link', { name: '新建作品', exact: true }).click()
   await expect(page.getByText('登录已失效，请重新登录。原管理路径已保留。')).toBeVisible()
   await page.evaluate(() => window.__mockControls?.setScenario('normal'))
   await signIn(page)

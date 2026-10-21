@@ -112,6 +112,18 @@ describe('场景与错误语义', () => {
     await expectApiError(listPublicWorks(), 500, 'INTERNAL_ERROR')
   })
 
+  it('管理列表空/失败只影响管理列表，登录与公开数据保持原语义', async () => {
+    setMockScenario('admin-list-failure')
+    await login({ username: 'admin', password: 'admin' })
+    await expectApiError(listAdminWorks(), 500, 'INTERNAL_ERROR')
+    expect((await listPublicWorks()).items).toHaveLength(10)
+
+    setMockScenario('admin-list-empty')
+    expect((await listAdminWorks()).items).toEqual([])
+    expect((await listPublicWorks()).items).toHaveLength(10)
+    expect(await getAdminWork('work_draft_001')).toMatchObject({ id: 'work_draft_001' })
+  })
+
   it('未登录访问管理接口返回 401', async () => {
     await expectApiError(listAdminWorks(), 401, 'UNAUTHENTICATED')
   })

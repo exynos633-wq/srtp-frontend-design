@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import type { PublicWork } from '../../types/work'
 import { classNames } from '../../lib/classNames'
 import { canUseCoverSource, runCoverTransition, runDirectCoverEntrance } from '../../lib/coverFlip'
 import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
@@ -51,8 +50,15 @@ const TERMINAL_COPY: Record<
   },
 }
 
+/** 观看外壳只需要身份、名称与封面；公开详情和管理授权预览都可直接传入。 */
+export interface PreviewWork {
+  id: string
+  name: string
+  coverUrl: string
+}
+
 export interface PreviewViewerProps {
-  work: PublicWork
+  work: PreviewWork
   /** 信息层开始展开；与是否完成动画无关，页面可用性不依赖它。 */
   onEntered?: () => void
 }

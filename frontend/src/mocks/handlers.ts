@@ -179,6 +179,13 @@ export const handlers = [
   http.get(/\/api\/admin\/works$/, () => {
     const session = requireSession()
     if (session instanceof Response) return session
+    // 只影响管理列表；公开接口、登录与单件管理读取保持原语义。
+    if (getMockScenario() === 'admin-list-failure') {
+      return fail(500, 'INTERNAL_ERROR', '读取管理作品列表失败。')
+    }
+    if (getMockScenario() === 'admin-list-empty') {
+      return HttpResponse.json({ items: [] })
+    }
     return HttpResponse.json({ items: listAdminWorks() })
   }),
 
