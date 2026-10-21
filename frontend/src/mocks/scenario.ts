@@ -19,6 +19,9 @@ export type MockScenario =
   | 'login-error'
   | 'validation-failure'
   | 'model-in-use'
+  | 'upload-cover-failure'
+  | 'upload-model-failure'
+  | 'upload-validating'
 
 export interface MockScenarioInfo {
   id: MockScenario
@@ -61,6 +64,21 @@ export const MOCK_SCENARIOS: MockScenarioInfo[] = [
   { id: 'auth-expired', label: '登录失效', description: '管理接口返回 401，页面应提示重新登录。' },
   { id: 'validation-failure', label: '发布校验失败', description: '发布接口返回 422 与字段错误。' },
   { id: 'model-in-use', label: '资源占用中', description: '替换模型资源返回 409，需先下架并等会话结束。' },
+  {
+    id: 'upload-cover-failure',
+    label: '模拟封面上传失败',
+    description: '仅开发上传模拟：模型可完成，封面在模拟验证阶段失败，可重试。',
+  },
+  {
+    id: 'upload-model-failure',
+    label: '模拟模型上传失败',
+    description: '仅开发上传模拟：封面可完成，模型在模拟验证阶段失败，可重试。',
+  },
+  {
+    id: 'upload-validating',
+    label: '模拟验证停滞',
+    description: '仅开发上传模拟：资源停在验证中，用于检查未 ready 不能绑定。',
+  },
 ]
 
 let current: MockScenario = 'normal'

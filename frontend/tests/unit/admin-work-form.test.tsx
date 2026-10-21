@@ -9,10 +9,14 @@ import { login } from '../../src/api/auth'
 import { queryKeys } from '../../src/api/queryKeys'
 import { createQueryClient } from '../../src/app/queryClient'
 import { routes } from '../../src/app/routes'
+import { markMocksActive } from '../../src/app/mocksStatus'
 import { server } from '../../src/mocks/node'
 import { resetMockState } from '../../src/mocks/scenario'
 
-beforeAll(() => server.listen({ onUnhandledFrame: 'bypass' }))
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: 'bypass' })
+  markMocksActive()
+})
 afterEach(() => {
   server.resetHandlers()
   vi.restoreAllMocks()
@@ -156,7 +160,7 @@ describe('P11 新建与编辑表单', () => {
   it('PATCH 只发实际修改字段，并保留已有模型与封面绑定', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const { name } = await openEdit()
-    expect(screen.getByText(/已绑定现有模型资源（GLB）/)).toBeVisible()
+    expect(screen.getByText('现有模型资源（GLB）')).toBeVisible()
 
     fireEvent.change(name, { target: { value: '只改名称' } })
     fireEvent.click(screen.getByRole('button', { name: '保存并更新公开内容' }))
@@ -168,7 +172,7 @@ describe('P11 新建与编辑表单', () => {
     expect(bodyOf(patches[0])).not.toHaveProperty('cityId')
     expect(bodyOf(patches[0])).not.toHaveProperty('modelAssetId')
     expect(bodyOf(patches[0])).not.toHaveProperty('coverAssetId')
-    expect(screen.getByText(/已绑定现有模型资源（GLB）/)).toBeVisible()
+    expect(screen.getByText('现有模型资源（GLB）')).toBeVisible()
   })
 
   it('主动清除城市显式发送 cityId: null，并更新管理数据', async () => {
@@ -761,7 +765,7 @@ describe('P11 新建与编辑表单', () => {
     expect(screen.queryByRole('button', { name: /下架/ })).toBeNull()
     expect(screen.getByText(/发布与下架入口暂不可用/)).toBeVisible()
     expect(screen.getByText('模型资源')).toBeVisible()
-    expect(screen.queryByLabelText(/选择模型文件/)).toBeNull()
-    expect(screen.queryByLabelText(/选择封面/)).toBeNull()
+    expect(screen.getByLabelText('选择模型文件')).toBeInTheDocument()
+    expect(screen.getByLabelText('选择封面文件')).toBeInTheDocument()
   })
 })
