@@ -13,6 +13,8 @@ export type MockScenario =
   | 'list-failure'
   | 'cover-failure'
   | 'auth-expired'
+  | 'auth-forbidden'
+  | 'login-error'
   | 'validation-failure'
   | 'model-in-use'
 
@@ -42,6 +44,8 @@ export const MOCK_SCENARIOS: MockScenarioInfo[] = [
   },
   { id: 'list-failure', label: '读取失败', description: '公开读取接口返回 500，页面应显示失败而不是空列表。' },
   { id: 'cover-failure', label: '封面失败', description: '列表与详情正常返回，封面地址失效，页面显示不冒充模型的替代。' },
+  { id: 'auth-forbidden', label: '管理无权限', description: '认证与管理读取返回 403，保留路径并诚实反馈。' },
+  { id: 'login-error', label: '登录错误', description: '登录返回 401，不改变表单输入。' },
   { id: 'auth-expired', label: '登录失效', description: '管理接口返回 401，页面应提示重新登录。' },
   { id: 'validation-failure', label: '发布校验失败', description: '发布接口返回 422 与字段错误。' },
   { id: 'model-in-use', label: '资源占用中', description: '替换模型资源返回 409，需先下架并等会话结束。' },
