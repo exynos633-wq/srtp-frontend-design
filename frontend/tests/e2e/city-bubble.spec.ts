@@ -275,8 +275,14 @@ test('气泡作品链接接入详情页，且只使用被点击封面作为来�
   await expect(page).toHaveURL(/\/works\/work_demo_001$/)
   await expect(page.getByRole('heading', { level: 1, name: '院落模型' })).toBeVisible()
   await expect(page.locator('[data-city-bubble]')).toHaveCount(0)
-  const cloneCount = await page.evaluate(
-    () => (window as unknown as { __coverCloneCount?: number }).__coverCloneCount ?? 0,
-  )
-  expect(cloneCount).toBe(1)
+  // 共享封面代理是短生命周期视觉层，MutationObserver 与断言之间允许一个渲染帧。
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => (window as unknown as { __coverCloneCount?: number }).__coverCloneCount ?? 0,
+        ),
+      { timeout: 3000 },
+    )
+    .toBe(1)
 })

@@ -200,6 +200,38 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     const error = await expectApiError(updateAdminWork('work_demo_001', { cityId: 'not-a-city' }), 422, 'VALIDATION_FAILED')
     expect(error.fields).toMatchObject({ cityId: expect.any(String) })
   })
+  it('无城市作品可以发布，清空城市后仍留在公开目录', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const created = await createAdminWork({
+      name: '无城市作品',
+      description: '城市选填，仍可发布。',
+      modelAssetId: 'asset_demo_001_model',
+      coverAssetId: 'asset_demo_001_cover',
+    })
+    const published = await publishAdminWork(created.id)
+    expect(published.cityId).toBeNull()
+    expect(await getPublicWork(created.id)).toMatchObject({ city: null })
+
+    await updateAdminWork('work_demo_001', { cityId: null })
+    const publicWork = await getPublicWork('work_demo_001')
+    expect(publicWork.city).toBeNull()
+    const { items } = await listPublicWorks()
+    expect(items.some((item) => item.id === 'work_demo_001')).toBe(true)
+  })
+
+  it('已发布元数据或城市更新后公开读取立即使用新值', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    await updateAdminWork('work_demo_001', {
+      name: '公开更新后的院落',
+      description: '更新后的建筑介绍。',
+      cityId: '330100',
+    })
+    expect(await getPublicWork('work_demo_001')).toMatchObject({
+      name: '公开更新后的院落',
+      description: '更新后的建筑介绍。',
+      city: { id: '330100', name: '杭州市' },
+    })
+  })
 
   it('缺必填资源时发布返回 422 与字段错误', async () => {
     await login({ username: 'admin', password: 'admin' })
@@ -225,8 +257,9 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     expect(items.some((item) => item.id === 'work_draft_002')).toBe(true)
   })
 
-  it('资源占用场景：替换模型返回 409', async () => {
+  it('已下架作品替换模型遇到资源占用返回 409', async () => {
     await login({ username: 'admin', password: 'admin' })
+    await unpublishAdminWork('work_demo_001')
     setMockScenario('model-in-use')
     await expectApiError(updateAdminWork('work_demo_001', { modelAssetId: 'asset_demo_002_model' }), 409, 'MODEL_IN_USE')
   })
@@ -247,8 +280,9 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     expect(after.updatedAt).toBe(before.updatedAt)
   })
 
-  it('409 资源占用时不留下部分修改', async () => {
+  it('409 资源占用时不留下部分修改且保持已下架状态', async () => {
     await login({ username: 'admin', password: 'admin' })
+    await unpublishAdminWork('work_demo_001')
     const before = await getAdminWork('work_demo_001')
 
     setMockScenario('model-in-use')
@@ -261,6 +295,7 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     const after = await getAdminWork('work_demo_001')
     expect(after.name).toBe(before.name)
     expect(after.modelAssetId).toBe(before.modelAssetId)
+    expect(after.status).toBe('offline')
   })
 
   it.each(['work_draft_002', 'work_offline_001'])('资源占用时清空模型也不留下部分修改：%s', async (id) => {
@@ -276,6 +311,55 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     )
 
     expect(await getAdminWork(id)).toEqual(before)
+  })
+
+  it('重复发布或下架到同一状态是幂等的，不重复更新时间戳', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const created = await createAdminWork({
+      name: '幂等作品',
+      description: '用于发布幂等回归。',
+      modelAssetId: 'asset_demo_001_model',
+      coverAssetId: 'asset_demo_001_cover',
+    })
+    const published = await publishAdminWork(created.id)
+    const publishedAgain = await publishAdminWork(created.id)
+    expect(publishedAgain.updatedAt).toBe(published.updatedAt)
+    expect(publishedAgain.publishedAt).toBe(published.publishedAt)
+
+    const offline = await unpublishAdminWork(created.id)
+    const offlineAgain = await unpublishAdminWork(created.id)
+    expect(offlineAgain.updatedAt).toBe(offline.updatedAt)
+    expect(offlineAgain.status).toBe('offline')
+  })
+
+  it('已发布作品禁止直接替换或清除资源，必须先下架', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const before = await getAdminWork('work_demo_001')
+    for (const input of [
+      { modelAssetId: 'asset_demo_002_model' },
+      { coverAssetId: null },
+    ]) {
+      await expectApiError(updateAdminWork('work_demo_001', input), 409, 'WORK_PUBLISHED')
+    }
+    const after = await getAdminWork('work_demo_001')
+    expect(after.status).toBe('published')
+    expect(after.modelAssetId).toBe(before.modelAssetId)
+    expect(after.coverAssetId).toBe(before.coverAssetId)
+
+    await unpublishAdminWork('work_demo_001')
+    const replaced = await updateAdminWork('work_demo_001', {
+      modelAssetId: 'asset_demo_002_model',
+    })
+    expect(replaced.status).toBe('offline')
+    expect(replaced.modelAssetId).toBe('asset_demo_002_model')
+  })
+
+  it('下架城市最后一件作品后该城市点位消失', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    expect((await listGlobeCities()).items.some((city) => city.id === '440300')).toBe(true)
+    await unpublishAdminWork('work_placeholder_009')
+    expect((await listGlobeCities()).items.some((city) => city.id === '440300')).toBe(false)
+    expect((await listCityWorks('440300')).items).toEqual([])
   })
 
   it('已发布作品保存后仍要满足发布条件', async () => {

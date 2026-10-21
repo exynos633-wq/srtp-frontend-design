@@ -26,14 +26,13 @@ async function createLongDraft(page: Page, name: string) {
   }, name)
 }
 
-test('管理列表区分三种状态，入口完整，发布与下架明确不可用', async ({ page }) => {
+test('管理列表区分三种状态，入口完整，发布与下架可用', async ({ page }) => {
   await openAdminWorks(page)
 
   const table = page.getByRole('table', { name: '管理作品列表' })
   await expect(table).toBeVisible()
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeFocused()
-  await expect(page.getByText(/发布与下架入口暂不可用/)).toBeVisible()
-  await expect(page.getByText(/新建与编辑表单已可保存草稿和更新资料/)).toBeVisible()
+  await expect(page.getByText(/发布前请先保存作品资料/)).toBeVisible()
 
   const published = table.getByRole('row', { name: /院落模型/ })
   await expect(published.getByText('已发布', { exact: true })).toBeVisible()
@@ -47,18 +46,18 @@ test('管理列表区分三种状态，入口完整，发布与下架明确不�
     'href',
     '/admin/works/work_demo_001/preview',
   )
-  await expect(published.getByRole('button', { name: '下架 院落模型' })).toBeDisabled()
+  await expect(published.getByRole('button', { name: '下架 院落模型' })).toBeEnabled()
 
   const draft = table.getByRole('row', { name: /待补资源的草稿/ })
   await expect(draft.getByText('草稿', { exact: true })).toBeVisible()
   await expect(draft.getByText('上海市', { exact: true })).toBeVisible()
   await expect(draft.getByText('未设置', { exact: true })).toBeVisible()
   await expect(draft.getByText('缺封面')).toBeVisible()
-  await expect(draft.getByRole('button', { name: '发布 待补资源的草稿' })).toBeDisabled()
+  await expect(draft.getByRole('button', { name: '发布 待补资源的草稿' })).toBeEnabled()
 
   const offline = table.getByRole('row', { name: /已下架占位/ })
   await expect(offline.getByText('已下架', { exact: true })).toBeVisible()
-  await expect(offline.getByRole('button', { name: '发布 已下架占位' })).toBeDisabled()
+  await expect(offline.getByRole('button', { name: '发布 已下架占位' })).toBeEnabled()
 
   const edit = published.getByRole('link', { name: '编辑 院落模型' })
   await edit.focus()
@@ -156,7 +155,7 @@ for (const width of [320, 390, 768, 1440]) {
     await edit.scrollIntoViewIfNeeded()
     await expect(edit).toBeVisible()
     await expect(row.getByRole('link', { name: new RegExp('^预览 ') })).toBeVisible()
-    await expect(row.getByRole('button', { name: new RegExp('^发布 ') })).toBeDisabled()
+    await expect(row.getByRole('button', { name: new RegExp('^发布 ') })).toBeEnabled()
 
     const box = await edit.boundingBox()
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)

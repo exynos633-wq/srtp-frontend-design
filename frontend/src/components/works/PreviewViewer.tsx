@@ -16,6 +16,7 @@ type PreviewStatus =
   | 'offline'
   | 'disconnected'
   | 'failed'
+  | 'unavailable'
   | 'ended'
 
 type SimulatedOutcome = 'normal' | 'busy' | 'offline' | 'disconnected' | 'failed'
@@ -29,7 +30,7 @@ const OUTCOME_OPTIONS: Array<{ id: SimulatedOutcome; label: string }> = [
 ]
 
 const TERMINAL_COPY: Record<
-  Exclude<SimulatedOutcome, 'normal'>,
+  Exclude<SimulatedOutcome, 'normal'> | 'unavailable',
   { title: string; description: string }
 > = {
   busy: {
@@ -48,6 +49,10 @@ const TERMINAL_COPY: Record<
     title: '预览准备失败',
     description: '准备过程中断，未进入可交互状态。请手动重试。',
   },
+  unavailable: {
+    title: '作品当前不可预览',
+    description: '作品可能已下架或未公开。新的预览申请已被拒绝；已开始的观看实例不受影响。',
+  },
 }
 
 /** 观看外壳只需要身份、名称与封面；公开详情和管理授权预览都可直接传入。 */
@@ -61,9 +66,18 @@ export interface PreviewViewerProps {
   work: PreviewWork
   /** 信息层开始展开；与是否完成动画无关，页面可用性不依赖它。 */
   onEntered?: () => void
+  /** 开始/重试前用现有公开读取边界确认作品当前仍公开。 */
+  ensureAvailable?: () => Promise<boolean>
+  /** 首次进入模拟观看时通知页面保留已开始的实例。 */
+  onPreviewStarted?: () => void
 }
 
-export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
+export function PreviewViewer({
+  work,
+  onEntered,
+  ensureAvailable,
+  onPreviewStarted,
+}: PreviewViewerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const slotRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<HTMLElement>(null)
@@ -82,6 +96,9 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
   const sourceResolvedRef = useRef(false)
   const enteredRef = useRef(false)
   const onEnteredRef = useRef(onEntered)
+  const ensureAvailableRef = useRef(ensureAvailable)
+  const onPreviewStartedRef = useRef(onPreviewStarted)
+  const startedRef = useRef(false)
   const statusRef = useRef<PreviewStatus>('idle')
   const startTimerRef = useRef<number | null>(null)
   const resetTimerRef = useRef<number | null>(null)
@@ -97,6 +114,11 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
   }, [onEntered])
 
   useLayoutEffect(() => {
+    ensureAvailableRef.current = ensureAvailable
+    onPreviewStartedRef.current = onPreviewStarted
+  }, [ensureAvailable, onPreviewStarted])
+
+  useLayoutEffect(() => {
     statusRef.current = status
   }, [status])
 
@@ -104,6 +126,12 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
     if (enteredRef.current) return
     enteredRef.current = true
     onEnteredRef.current?.()
+  }, [])
+
+  const notifyStarted = useCallback(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    onPreviewStartedRef.current?.()
   }, [])
 
   // 消费一次性来源。StrictMode 会重跑布局 effect，但来源只取一次。
@@ -194,12 +222,38 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
     const attempt = attemptRef.current
     setResetNotice(false)
     setStatus('preparing')
-    startTimerRef.current = window.setTimeout(() => {
-      startTimerRef.current = null
+
+    const scheduleStart = () => {
       if (attempt !== attemptRef.current) return
-      const outcome = simulation
-      setStatus(outcome === 'normal' ? 'interactive' : outcome)
-    }, 1400)
+      // 数据已获准开始后即视为已有观看实例；即使准备期间作品下架，
+      // 当前实例也不被缓存失效强行结束，只有新的开始/重试会重新检查。
+      notifyStarted()
+      startTimerRef.current = window.setTimeout(() => {
+        startTimerRef.current = null
+        if (attempt !== attemptRef.current) return
+        const outcome = simulation
+        setStatus(outcome === 'normal' ? 'interactive' : outcome)
+      }, 1400)
+    }
+
+    const check = ensureAvailableRef.current
+    if (!check) {
+      scheduleStart()
+      return
+    }
+    void check()
+      .then((available) => {
+        if (attempt !== attemptRef.current) return
+        if (!available) {
+          setStatus('unavailable')
+          return
+        }
+        scheduleStart()
+      })
+      .catch(() => {
+        if (attempt !== attemptRef.current) return
+        setStatus('failed')
+      })
   }
 
   const endPreview = () => {
@@ -400,7 +454,11 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
   const isPreparing = status === 'preparing'
   const canEnd = isInteractive || isPreparing
   const terminalStatus =
-    status === 'busy' || status === 'offline' || status === 'disconnected' || status === 'failed'
+    status === 'busy' ||
+    status === 'offline' ||
+    status === 'disconnected' ||
+    status === 'failed' ||
+    status === 'unavailable'
       ? status
       : null
   const terminalCopy = terminalStatus ? TERMINAL_COPY[terminalStatus] : null
@@ -410,7 +468,9 @@ export function PreviewViewer({ work, onEntered }: PreviewViewerProps) {
     : isPreparing
       ? '正在准备，可结束本次预览'
       : terminalStatus
-        ? '等待手动重试'
+        ? status === 'unavailable'
+          ? '作品不可预览'
+          : '等待手动重试'
         : status === 'ended'
           ? '预览已结束'
           : '开始预览后可用'

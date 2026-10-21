@@ -11,27 +11,57 @@ import { StatusMessage } from '../components/ui/StatusMessage'
 import { PreviewViewer } from '../components/works/PreviewViewer'
 import { classNames } from '../lib/classNames'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
+import type { PublicWork } from '../types/work'
 import styles from './WorkDetailPage.module.css'
 
 export default function WorkDetailPage() {
   const { id } = useParams<{ id: string }>()
+  // 作品切换时重置“已开始观看”的本地保留状态。
+  return <WorkDetailContent key={id ?? 'missing'} id={id} />
+}
 
+function WorkDetailContent({ id }: { id?: string }) {
   const pageRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const stateTitleRef = useRef<HTMLHeadingElement>(null)
   const [enteredWorkId, setEnteredWorkId] = useState<string | null>(null)
+  const [startedWorkId, setStartedWorkId] = useState<string | null>(null)
+  const [retainedWork, setRetainedWork] = useState<PublicWork | null>(null)
 
   const { data: work, isPending, isError, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.works.detail(id ?? ''),
     queryFn: ({ signal }) => getPublicWork(id ?? '', signal),
     enabled: Boolean(id),
+    // 新进入详情时按当前公开状态重新确认，不把旧目录缓存当作仍公开。
+    staleTime: 0,
   })
 
-  const entered = work !== undefined && enteredWorkId === work.id
+  const started = startedWorkId === id && retainedWork?.id === id
+  const displayedWork = work ?? (started ? retainedWork : null)
+  const entered = displayedWork != null && enteredWorkId === displayedWork.id
   const handleEntered = useCallback(() => {
-    if (work) setEnteredWorkId(work.id)
-  }, [work])
-  const workId = work?.id
+    if (displayedWork) setEnteredWorkId(displayedWork.id)
+  }, [displayedWork])
+  const handlePreviewStarted = useCallback(() => {
+    if (!displayedWork) return
+    setStartedWorkId(displayedWork.id)
+    setRetainedWork(displayedWork)
+  }, [displayedWork])
+  const ensurePreviewAvailable = useCallback(async () => {
+    if (!id) return false
+    try {
+      await getPublicWork(id)
+      return true
+    } catch (failure) {
+      if (isApiError(failure) && failure.status === 404) {
+        // 用同一公开读取边界刷新页面；已开始的观看由 retainedWork 保留。
+        void refetch()
+        return false
+      }
+      throw failure
+    }
+  }, [id, refetch])
+  const workId = displayedWork?.id
 
   // 详情总是从顶部开始；返回目录的滚动位置由目录页单独恢复。
   useLayoutEffect(() => {
@@ -50,7 +80,7 @@ export default function WorkDetailPage() {
 
   useGSAP(
     () => {
-      if (!work || !entered) return
+      if (!displayedWork || !entered) return
       const layers = pageRef.current?.querySelectorAll<HTMLElement>('[data-detail-layer]')
       if (!layers || layers.length === 0) return
       if (prefersReducedMotion()) {
@@ -67,17 +97,18 @@ export default function WorkDetailPage() {
         clearProps: 'opacity,transform',
       })
     },
-    { scope: pageRef, dependencies: [entered, work?.id] },
+    { scope: pageRef, dependencies: [entered, displayedWork?.id] },
   )
 
-  const notFound = !id || (isApiError(error) && error.status === 404)
+  const notFound = !id || (!started && isApiError(error) && error.status === 404)
+  const showReadError = !notFound && !started && isError && displayedWork === null
   const errorMessage =
     error instanceof Error ? error.message : '读取作品详情失败，请稍后手动重试。'
 
   useLayoutEffect(() => {
-    if (!notFound && !(isError && !work)) return
+    if (!notFound && !showReadError) return
     stateTitleRef.current?.focus({ preventScroll: true })
-  }, [isError, notFound, work])
+  }, [notFound, showReadError])
 
   return (
     <div className={styles.page} ref={pageRef}>
@@ -88,7 +119,7 @@ export default function WorkDetailPage() {
         返回全部作品
       </Link>
 
-      {isPending && !notFound ? (
+      {isPending && !notFound && !displayedWork ? (
         <div className={styles.stateBlock} aria-busy="true">
           <StatusMessage tone="info">正在读取作品信息与封面…</StatusMessage>
         </div>
@@ -105,7 +136,7 @@ export default function WorkDetailPage() {
         </div>
       ) : null}
 
-      {!notFound && isError && !work ? (
+      {showReadError ? (
         <div className={styles.stateBlock}>
           <h1 className={styles.stateTitle} ref={stateTitleRef} tabIndex={-1}>
             作品读取失败
@@ -119,18 +150,30 @@ export default function WorkDetailPage() {
         </div>
       ) : null}
 
-      {!notFound && work ? (
+      {started && isApiError(error) && error.status === 404 ? (
+        <StatusMessage tone="warning">
+          该作品已不再公开。当前已开始的模拟观看会保留；结束后不能重新开始。
+        </StatusMessage>
+      ) : null}
+
+      {!notFound && displayedWork ? (
         <div className={styles.layout}>
           <div className={styles.viewerColumn}>
-            <PreviewViewer key={work.id} work={work} onEntered={handleEntered} />
+            <PreviewViewer
+              key={displayedWork.id}
+              work={displayedWork}
+              onEntered={handleEntered}
+              onPreviewStarted={handlePreviewStarted}
+              ensureAvailable={ensurePreviewAvailable}
+            />
           </div>
 
           <aside className={styles.info} aria-label="作品信息">
             <header className={styles.infoHeader} data-detail-layer>
               <h1 className={styles.title} ref={titleRef} tabIndex={-1}>
-                {work.name}
+                {displayedWork.name}
               </h1>
-              <p className={styles.city}>{work.city?.name ?? '未设置城市'}</p>
+              <p className={styles.city}>{displayedWork.city?.name ?? '未设置城市'}</p>
               <p className={styles.likePlaceholder}>
                 <span className={styles.likeIcon} aria-hidden="true">
                   ♡
@@ -141,13 +184,13 @@ export default function WorkDetailPage() {
 
             <section className={styles.section} data-detail-layer>
               <h2 className={styles.sectionTitle}>建筑介绍</h2>
-              <p className={styles.paragraph}>{work.description}</p>
+              <p className={styles.paragraph}>{displayedWork.description}</p>
             </section>
 
-            {work.modelingNote && work.modelingNote.trim() !== '' ? (
+            {displayedWork.modelingNote && displayedWork.modelingNote.trim() !== '' ? (
               <section className={styles.section} data-detail-layer>
                 <h2 className={styles.sectionTitle}>建模说明（选填）</h2>
-                <p className={styles.paragraph}>{work.modelingNote}</p>
+                <p className={styles.paragraph}>{displayedWork.modelingNote}</p>
               </section>
             ) : null}
 

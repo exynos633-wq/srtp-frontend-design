@@ -3,8 +3,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { HttpResponse, http } from 'msw'
-import { getAdminWork, listAdminWorks, updateAdminWork } from '../../src/api/adminWorks'
+import {
+  createAdminWork,
+  getAdminWork,
+  listAdminWorks,
+  updateAdminWork,
+} from '../../src/api/adminWorks'
 import { login } from '../../src/api/auth'
+import { getPublicWork } from '../../src/api/works'
 import { queryKeys } from '../../src/api/queryKeys'
 import { createQueryClient } from '../../src/app/queryClient'
 import { routes } from '../../src/app/routes'
@@ -61,7 +67,7 @@ describe('P10 管理作品列表', () => {
       'href',
       '/admin/works/work_demo_001/preview',
     )
-    expect(within(publishedRow).getByRole('button', { name: '下架 院落模型' })).toBeDisabled()
+    expect(within(publishedRow).getByRole('button', { name: '下架 院落模型' })).toBeEnabled()
 
     const draftEdit = within(table)
       .getAllByRole('link', { name: /^编辑 / })
@@ -73,39 +79,95 @@ describe('P10 管理作品列表', () => {
     expect(within(draftRow).getByText('未设置城市')).toBeVisible()
     expect(within(draftRow).getByText('未设置')).toBeVisible()
     expect(within(draftRow).getByText('缺封面')).toBeVisible()
-    expect(within(draftRow).getByRole('button', { name: '发布 未命名' })).toBeDisabled()
+    expect(within(draftRow).getByRole('button', { name: '发布 未命名' })).toBeEnabled()
 
     const offlineEdit = within(table)
       .getAllByRole('link', { name: /^编辑 / })
       .find((link) => link.getAttribute('href') === '/admin/works/work_offline_001/edit')
     const offlineRow = offlineEdit!.closest('tr')!
     expect(within(offlineRow).getByText('已下架')).toBeVisible()
-    expect(within(offlineRow).getByRole('button', { name: '发布 已下架占位' })).toBeDisabled()
+    expect(within(offlineRow).getByRole('button', { name: '发布 已下架占位' })).toBeEnabled()
 
     expect(within(table).getAllByText('已发布')).toHaveLength(10)
     expect(within(table).getAllByText('草稿')).toHaveLength(2)
     expect(within(table).getAllByText('已下架')).toHaveLength(1)
     expect(within(table).getAllByText('缺封面')).toHaveLength(3)
-    expect(screen.getByText(/发布与下架入口暂不可用/)).toBeVisible()
-    expect(screen.getByText(/新建与编辑表单已可保存草稿和更新资料/)).toBeVisible()
+    expect(screen.getByText(/发布前请先保存作品资料/)).toBeVisible()
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('button', { name: /删除/ })).toBeNull()
-
-    let mutations = 0
-    server.use(
-      http.post(/\/api\/admin\/works\/[^/]+\/(?:publish|unpublish)$/, () => {
-        mutations += 1
-        return HttpResponse.json({})
-      }),
-    )
-    fireEvent.click(within(publishedRow).getByRole('button', { name: '下架 院落模型' }))
-    fireEvent.click(within(draftRow).getByRole('button', { name: '发布 未命名' }))
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
-    expect(mutations).toBe(0)
   })
 
+
+  it('发布缺必填时显示可恢复错误、聚焦并能进入编辑补齐', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    renderAt('/admin/works')
+    const table = await screen.findByRole('table', { name: '管理作品列表' })
+    const row = within(table).getByRole('row', { name: /待补资源的草稿/ })
+
+    fireEvent.click(within(row).getByRole('button', { name: '发布 待补资源的草稿' }))
+    const heading = await screen.findByRole('heading', { name: '发布或下架未完成' })
+    await waitFor(() => expect(heading).toHaveFocus())
+    expect(screen.getByText(/需补齐：封面、模型资源/)).toBeVisible()
+    expect(screen.getByRole('link', { name: '去编辑补齐' })).toHaveAttribute(
+      'href',
+      '/admin/works/work_draft_002/edit',
+    )
+    expect(within(row).getByText('草稿')).toBeVisible()
+    expect(within(row).getByRole('button', { name: '发布 待补资源的草稿' })).toBeEnabled()
+  })
+
+  it('列表发布成功后更新状态、焦点与公开读取，并失效公开/地球缓存', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const draft = await createAdminWork({
+      name: '列表发布作品',
+      description: '从列表发布。',
+      modelAssetId: 'asset_demo_001_model',
+      coverAssetId: 'asset_demo_001_cover',
+    })
+    const { client } = renderAt('/admin/works')
+    client.setQueryData(queryKeys.works.list(), { items: [] })
+    client.setQueryData(queryKeys.globe.cities(), { items: [] })
+
+    const table = await screen.findByRole('table', { name: '管理作品列表' })
+    const row = within(table).getByRole('row', { name: /列表发布作品/ })
+    fireEvent.click(within(row).getByRole('button', { name: '发布 列表发布作品' }))
+
+    expect(await screen.findByText('已发布《列表发布作品》。')).toBeVisible()
+    await waitFor(() =>
+      expect(within(row).getByRole('button', { name: '下架 列表发布作品' })).toHaveFocus(),
+    )
+    expect(within(row).getByText('已发布')).toBeVisible()
+    expect(await getPublicWork(draft.id)).toMatchObject({ id: draft.id, city: null })
+    expect(client.getQueryState(queryKeys.works.list())?.isInvalidated).toBe(true)
+    expect(client.getQueryState(queryKeys.globe.cities())?.isInvalidated).toBe(true)
+  })
+
+  it('列表下架需确认；成功后公开 404、焦点回到发布按钮且缓存失效', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const { client } = renderAt('/admin/works')
+    client.setQueryData(queryKeys.works.list(), { items: [] })
+    client.setQueryData(queryKeys.globe.cities(), { items: [] })
+    const confirmSpy = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true)
+
+    const table = await screen.findByRole('table', { name: '管理作品列表' })
+    const row = within(table).getByRole('row', { name: /院落模型/ })
+    fireEvent.click(within(row).getByRole('button', { name: '下架 院落模型' }))
+    expect(confirmSpy).toHaveBeenCalledTimes(1)
+    expect(within(row).getByText('已发布')).toBeVisible()
+
+    fireEvent.click(within(row).getByRole('button', { name: '下架 院落模型' }))
+    expect(await screen.findByText('已下架《院落模型》。')).toBeVisible()
+    await waitFor(() =>
+      expect(within(row).getByRole('button', { name: '发布 院落模型' })).toHaveFocus(),
+    )
+    expect(within(row).getByText('已下架')).toBeVisible()
+    await expect(getPublicWork('work_demo_001')).rejects.toMatchObject({ status: 404 })
+    expect(client.getQueryState(queryKeys.works.list())?.isInvalidated).toBe(true)
+    expect(client.getQueryState(queryKeys.globe.cities())?.isInvalidated).toBe(true)
+  })
   it('管理列表为空时给出下一步，不伪装成读取失败', async () => {
     setMockScenario('admin-list-empty')
     await login({ username: 'admin', password: 'admin' })
@@ -402,4 +464,52 @@ describe('P10 授权预览', () => {
       client.getQueriesData({ queryKey: queryKeys.admin.all }).every(([, cached]) => cached === undefined),
     ).toBe(true)
   })
+
+  it('列表动作迟到成功在退出后仍失效公开缓存，不回填私有管理缓存', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    const draft = await createAdminWork({
+      name: '列表迟到发布',
+      description: '慢发布退出回归。',
+      modelAssetId: 'asset_demo_001_model',
+      coverAssetId: 'asset_demo_001_cover',
+    })
+    const work = await getAdminWork(draft.id)
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let requests = 0
+    server.use(
+      http.post(/\/api\/admin\/works\/[^/]+\/publish$/, async () => {
+        requests += 1
+        await gate
+        return HttpResponse.json({
+          ...work,
+          status: 'published',
+          publishedAt: '2026-10-20T10:00:00+08:00',
+          updatedAt: '2026-10-20T10:00:00+08:00',
+        })
+      }),
+    )
+    const { client } = renderAt('/admin/works')
+    client.setQueryData(queryKeys.works.list(), { items: [] })
+    client.setQueryData(queryKeys.globe.cities(), { items: [] })
+    const table = await screen.findByRole('table', { name: '管理作品列表' })
+    const row = within(table).getByRole('row', { name: /列表迟到发布/ })
+    fireEvent.click(within(row).getByRole('button', { name: '发布 列表迟到发布' }))
+    await waitFor(() => expect(requests).toBe(1))
+
+    fireEvent.click(screen.getByRole('button', { name: '退出登录' }))
+    expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+    await act(async () => {
+      release()
+      await new Promise((resolve) => setTimeout(resolve, 40))
+    })
+    expect(client.getQueryState(queryKeys.works.list())?.isInvalidated).toBe(true)
+    expect(client.getQueryState(queryKeys.globe.cities())?.isInvalidated).toBe(true)
+    expect(
+      client.getQueriesData({ queryKey: queryKeys.admin.all }).every(([, value]) => value === undefined),
+    ).toBe(true)
+  })
+
 })

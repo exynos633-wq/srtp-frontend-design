@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import {
   createAdminWork,
   getAdminWork,
+  unpublishAdminWork,
 } from '../../src/api/adminWorks'
 import { login } from '../../src/api/auth'
 import { createQueryClient } from '../../src/app/queryClient'
@@ -120,7 +121,7 @@ describe('P12 上传模拟 UI', () => {
     await screen.findByLabelText('作品名称')
 
     expect(
-      screen.getAllByText('已发布或已下架作品的资源替换尚未开放；本页只更新资料。'),
+      screen.getAllByText('已发布作品不可直接替换模型或封面，请先下架。'),
     ).toHaveLength(2)
     expect(screen.queryByLabelText('选择模型文件')).toBeNull()
     expect(screen.queryByLabelText('选择封面文件')).toBeNull()
@@ -286,4 +287,47 @@ describe('P12 上传模拟 UI', () => {
     expect(bodyOf(patches[0])).not.toHaveProperty('coverAssetId')
     expect(requests(fetchSpy, 'POST', /\/api\/admin\/works$/)).toHaveLength(1)
   })
+  it('下架后资源替换 409 保留旧绑定、字段与 offline，重试后仍需手动发布', async () => {
+    const draft = await createDraftWithAssets()
+    await unpublishAdminWork(draft.id)
+    setMockScenario('model-in-use')
+    await openEdit(draft.id)
+
+    const name = screen.getByLabelText('作品名称')
+    fireEvent.change(name, { target: { value: '409 失败也保留' } })
+    uploadFile(
+      '选择模型文件',
+      new File(['model'], 'replacement.glb', { type: 'model/gltf-binary' }),
+    )
+    const modelField = document.getElementById('work-model-asset')!
+    await within(modelField).findByText('模拟验证通过（ready）', {}, { timeout: 4000 })
+
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }))
+    expect(await screen.findByText(/该模型资源正在预览会话中/)).toBeVisible()
+    expect(name).toHaveValue('409 失败也保留')
+    expect(within(modelField).getByText('模拟验证通过（ready）')).toBeVisible()
+    expect(screen.getByText('现有模型资源（GLB）')).toBeVisible()
+    expect(screen.getByText('已下架')).toBeVisible()
+
+    const failed = await getAdminWork(draft.id)
+    expect(failed.status).toBe('offline')
+    expect(failed.modelAssetId).toBe('asset_demo_001_model')
+    expect(failed.name).toBe('资源草稿')
+
+    setMockScenario('normal')
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }))
+    expect(await screen.findByText('已保存当前修改。')).toBeVisible()
+    const saved = await getAdminWork(draft.id)
+    expect(saved.status).toBe('offline')
+    expect(saved.name).toBe('409 失败也保留')
+    expect(saved.modelAssetId).toMatch(/^asset_mock_upload_model_/)
+    expect(screen.getByRole('button', { name: '发布作品' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '发布作品' }))
+    expect(
+      await screen.findByText('已发布作品，公开目录和城市列表已更新。'),
+    ).toBeVisible()
+    expect((await getAdminWork(draft.id)).status).toBe('published')
+  })
+
 })
