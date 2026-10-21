@@ -60,13 +60,18 @@ describe('P09 认证边界', () => {
     await login({ username: 'admin', password: 'admin' })
     const { client, router } = open('/admin/works')
     await screen.findByRole('heading', { name: '作品管理' })
+    await screen.findByRole('table', { name: '管理作品列表' })
     client.setQueryData(queryKeys.admin.work('work_draft_001'), { description: '敏感草稿' })
     client.setQueryData(queryKeys.dictionary.provinces(), { items: [] })
     setMockScenario('auth-expired')
-    await act(async () => { await client.fetchQuery({ queryKey: queryKeys.admin.works(), queryFn: () => listAdminWorks() }).catch(() => {}) })
+    await act(async () => { await client.fetchQuery({ queryKey: queryKeys.admin.works(), queryFn: () => listAdminWorks(), staleTime: 0 }).catch(() => {}) })
     expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
-    expect(client.getQueriesData({ queryKey: queryKeys.admin.all })).toEqual([])
-    expect(client.getQueriesData({ queryKey: queryKeys.dictionary.all })).toEqual([])
+    expect(
+      client.getQueriesData({ queryKey: queryKeys.admin.all }).every(([, cached]) => cached === undefined),
+    ).toBe(true)
+    expect(
+      client.getQueriesData({ queryKey: queryKeys.dictionary.all }).every(([, cached]) => cached === undefined),
+    ).toBe(true)
     expect(router.state.location.search).toContain('returnTo=%2Fadmin%2Fworks')
   })
   it('403保留管理路径和权限反馈，重查后恢复', async () => {

@@ -1,0 +1,333 @@
+.worksPage {
+  max-width: 100%;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.head > header {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* 新建是导航而不是表单提交，视觉上沿用主按钮，语义仍是链接。 */
+.primaryLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-height);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.primaryLink:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+.primaryLink:active {
+  border-color: var(--color-accent-active);
+  background: var(--color-accent-active);
+}
+
+.state {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.stateTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+  overflow-wrap: anywhere;
+}
+
+.stateTitle:focus {
+  outline: none;
+}
+
+.stateAction {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.tableWrap {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-panel);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.coverCol {
+  width: 104px;
+}
+
+.statusCol {
+  width: 100px;
+}
+
+.cityCol {
+  width: 128px;
+}
+
+.formatCol {
+  width: 100px;
+}
+
+.actionsCol {
+  width: 264px;
+}
+
+.th {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  font-weight: var(--weight-label);
+  text-align: left;
+}
+
+.cell {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  vertical-align: middle;
+}
+
+.row + .row .cell {
+  border-top: 1px solid var(--color-line);
+}
+
+.coverBox,
+.coverFallback {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-image-bed);
+  overflow: hidden;
+}
+
+.coverFallback {
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  text-align: center;
+}
+
+.coverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  display: block;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-label);
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  font-weight: var(--weight-label);
+  white-space: nowrap;
+}
+
+.status[data-status='published'] {
+  border-color: var(--color-success-bg);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actionLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.actionLink:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+}
+
+@media (max-width: 1023px) {
+  .worksPage {
+    max-width: 100%;
+  }
+
+  .tableWrap {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .table,
+  .tableHead,
+  .row,
+  .cell {
+    display: block;
+  }
+
+  .table {
+    border-collapse: collapse;
+  }
+
+  .tableHead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tableBody {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+    background: var(--color-panel);
+  }
+
+  .cell {
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .row + .row .cell {
+    border-top: 0;
+  }
+
+  .coverCell {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+    align-self: start;
+  }
+
+  .coverBox,
+  .coverFallback {
+    width: 64px;
+  }
+
+  .nameCell {
+    grid-row: 1;
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .statusCell {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .cityCell {
+    display: flex;
+    grid-row: 3;
+    grid-column: 1 / -1;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .formatCell {
+    display: flex;
+    grid-row: 4;
+    grid-column: 1 / -1;
+    gap: var(--space-2);
+  }
+
+  .actionsCell {
+    grid-row: 5;
+    grid-column: 1 / -1;
+    margin-top: var(--space-2);
+  }
+
+  .cityCell::before,
+  .formatCell::before {
+    flex: 0 0 auto;
+    color: var(--color-text-muted);
+    content: attr(data-label) '：';
+  }
+}

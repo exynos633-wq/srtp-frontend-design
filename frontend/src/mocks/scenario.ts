@@ -11,6 +11,8 @@ export type MockScenario =
   | 'city-empty'
   | 'city-list-failure'
   | 'list-failure'
+  | 'admin-list-empty'
+  | 'admin-list-failure'
   | 'cover-failure'
   | 'auth-expired'
   | 'auth-forbidden'
@@ -43,6 +45,16 @@ export const MOCK_SCENARIOS: MockScenarioInfo[] = [
     description: '城市聚合正常，打开气泡读取作品列表返回 500，可就地重试。',
   },
   { id: 'list-failure', label: '读取失败', description: '公开读取接口返回 500，页面应显示失败而不是空列表。' },
+  {
+    id: 'admin-list-empty',
+    label: '管理列表空',
+    description: '仅管理作品列表为空；公开列表、详情与登录不受影响。',
+  },
+  {
+    id: 'admin-list-failure',
+    label: '管理列表失败',
+    description: '仅管理作品列表返回 500；公开列表与登录不受影响，可手动重试。',
+  },
   { id: 'cover-failure', label: '封面失败', description: '列表与详情正常返回，封面地址失效，页面显示不冒充模型的替代。' },
   { id: 'auth-forbidden', label: '管理无权限', description: '认证与管理读取返回 403，保留路径并诚实反馈。' },
   { id: 'login-error', label: '登录错误', description: '登录返回 401，不改变表单输入。' },
