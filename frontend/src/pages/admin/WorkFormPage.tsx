@@ -5,7 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createAdminWork, getAdminWork, updateAdminWork } from '../../api/adminWorks'
 import { listCities, listProvinces } from '../../api/dictionary'
 import { isApiError } from '../../api/http'
+import { isUploadSimulationEnabled } from '../../api/mockUploads'
+import { isMocksActive } from '../../app/mocksStatus'
 import { invalidateAfterWorkChange, queryKeys } from '../../api/queryKeys'
+import { UploadField } from '../../components/uploads/UploadField'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { SelectField } from '../../components/ui/SelectField'
@@ -14,7 +17,8 @@ import { TextareaField } from '../../components/ui/TextareaField'
 import { TextField } from '../../components/ui/TextField'
 import { registerLeaveGuard } from '../../lib/leaveGuard'
 import { classNames } from '../../lib/classNames'
-import { modelFormatLabel, workStatusLabel } from '../../lib/workLabels'
+import { useMockUpload } from '../../lib/useMockUpload'
+import { workStatusLabel } from '../../lib/workLabels'
 import {
   baselineFromAdminWork,
   draftFromAdminWork,
@@ -193,6 +197,21 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   const [savedMessage, setSavedMessage] = useState('')
   const titleRef = useRef<HTMLHeadingElement>(null)
 
+  const uploadsEnabled = isUploadSimulationEnabled(import.meta.env.DEV, isMocksActive())
+  const modelUpload = useMockUpload('model')
+  const coverUpload = useMockUpload('cover')
+  const status = work?.status ?? 'draft'
+  const hasUnsavedSelection = modelUpload.selection !== null || coverUpload.selection !== null
+  const hasUnsettledSelection = modelUpload.hasUnsettled || coverUpload.hasUnsettled
+  const resourceEditingDisabled = saving || !uploadsEnabled || status !== 'draft'
+  const resourceDisabledReason = !uploadsEnabled
+    ? '当前环境未开放上传；正式上传协议与校验规则待确认。'
+    : status !== 'draft'
+      ? '已发布或已下架作品的资源替换尚未开放；本页只更新资料。'
+      : saving
+        ? '正在保存，完成后再选择文件。'
+        : undefined
+
   // 通过 MutationCache 的 admin mutationKey 走现有 401/403 清理与 AuthGate 通知。
   const saveMutation = useMutation({
     mutationKey: queryKeys.admin.works(),
@@ -218,7 +237,10 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     }
   }, [])
 
-  const dirty = useMemo(() => isDraftDirty(draft, baseline), [baseline, draft])
+  const dirty = useMemo(
+    () => isDraftDirty(draft, baseline) || hasUnsavedSelection,
+    [baseline, draft, hasUnsavedSelection],
+  )
   useEffect(() => {
     dirtyRef.current = dirty
   }, [dirty])
@@ -350,8 +372,18 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     event.preventDefault()
     if (savingRef.current) return
 
+    if (hasUnsettledSelection) {
+      setFormError('模型或封面仍在模拟传输或验证中，请等待模拟验证通过或取消新选择后再保存。')
+      setSavedMessage('')
+      return
+    }
+
+    const resources = {
+      modelAssetId: modelUpload.readyAssetId,
+      coverAssetId: coverUpload.readyAssetId,
+    }
     const existingId = workId ?? createdIdRef.current
-    const patch = existingId ? toPatchInput(draft, baseline) : null
+    const patch = existingId ? toPatchInput(draft, baseline, resources) : null
     if (existingId && Object.keys(patch ?? {}).length === 0) {
       setFormError('')
       setFieldErrors({})
@@ -368,7 +400,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     try {
       const saved = await saveMutation.mutateAsync({
         id: existingId ?? null,
-        input: existingId ? (patch ?? {}) : toCreateInput(draft),
+        input: existingId ? (patch ?? {}) : toCreateInput(draft, resources),
       })
 
       // 退回登录页后不得把迟到结果写回任何管理缓存；未挂载时只失效公开/列表，
@@ -387,6 +419,8 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
         void client.invalidateQueries({ queryKey })
       }
 
+      modelUpload.clearAfterSave()
+      coverUpload.clearAfterSave()
       setWork(saved)
       setDraft(draftFromAdminWork(saved))
       setBaseline(baselineFromAdminWork(saved))
@@ -420,7 +454,6 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     }
   }
 
-  const status = work?.status ?? 'draft'
   const saveLabel = saving
     ? '正在保存…'
     : status === 'published'
@@ -439,8 +472,8 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
           headingTabIndex={-1}
           description={
             isNew
-              ? '可以只填一部分保存草稿。发布时必填名称、模型资源、封面和建筑介绍；城市与建模说明选填。'
-              : '保存只更新本页字段。已发布作品保存后会重新检查发布必填项，但不会自动发布或下架。'
+              ? '可以只填一部分保存草稿。模型或封面要等模拟验证通过后才能绑定；保存不会自动发布。'
+              : '保存会更新本页资料与已验证通过的新资源绑定。已发布作品不会自动发布或下架，资源替换尚未开放。'
           }
         />
         <BackLink />
@@ -573,55 +606,37 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
           </div>
 
           <section className={styles.resourcePanel} aria-label="模型与封面资源">
-            <div
-              className={styles.resourceGroup}
-              id={FIELD_IDS.modelAssetId}
-              tabIndex={-1}
-              aria-labelledby="work-model-heading"
-            >
-              <div className={styles.resourceHead}>
-                <h2 className={styles.resourceTitle} id="work-model-heading">
-                  模型资源
-                </h2>
-                <span className={styles.requiredTag}>发布时必填</span>
-              </div>
-              <p className={styles.resourceMeta}>
-                {work?.modelAssetId
-                  ? `已绑定现有模型资源（${modelFormatLabel(work.modelFormat)}）。保存文字或城市不会清除它。`
-                  : '尚未绑定模型资源。'}
-              </p>
-              <p className={styles.resourceHint}>
-                上传与替换尚未开放；本页不会上传或绑定本地文件。
-              </p>
-              {fieldErrors.modelAssetId ? (
-                <p className={styles.fieldError} role="alert">
-                  {fieldErrors.modelAssetId}
-                </p>
-              ) : null}
-            </div>
+            <p className={styles.protocolNote}>
+              {uploadsEnabled
+                ? '以下为仅开发环境的上传模拟：只传文件名、大小与文件类型等说明信息，不读取或传输文件内容。正式上传接口、类型细则、大小上限、分片/续传与校验规则均待确认。'
+                : '上传功能尚未开放；正式上传协议、类型细则与校验规则待确认。'}
+            </p>
 
-            <div
-              className={styles.resourceGroup}
+            <UploadField
+              kind="model"
+              id={FIELD_IDS.modelAssetId}
+              headingId="work-model-heading"
+              required
+              savedAssetId={work?.modelAssetId ?? null}
+              savedModelFormat={work?.modelFormat ?? null}
+              upload={modelUpload}
+              disabled={resourceEditingDisabled}
+              disabledReason={resourceDisabledReason}
+              error={fieldErrors.modelAssetId}
+            />
+
+            <UploadField
+              kind="cover"
               id={FIELD_IDS.coverAssetId}
-              tabIndex={-1}
-              aria-labelledby="work-cover-heading"
-            >
-              <div className={styles.resourceHead}>
-                <h2 className={styles.resourceTitle} id="work-cover-heading">
-                  封面
-                </h2>
-                <span className={styles.requiredTag}>发布时必填</span>
-              </div>
-              <CoverPreview coverUrl={work?.coverUrl ?? null} />
-              <p className={styles.resourceHint}>
-                上传与替换尚未开放。已发布作品的封面替换不在本页处理；当前保存不会清除已有封面绑定。
-              </p>
-              {fieldErrors.coverAssetId ? (
-                <p className={styles.fieldError} role="alert">
-                  {fieldErrors.coverAssetId}
-                </p>
-              ) : null}
-            </div>
+              headingId="work-cover-heading"
+              required
+              savedAssetId={work?.coverAssetId ?? null}
+              savedCoverUrl={work?.coverUrl ?? null}
+              upload={coverUpload}
+              disabled={resourceEditingDisabled}
+              disabledReason={resourceDisabledReason}
+              error={fieldErrors.coverAssetId}
+            />
           </section>
 
           <div className={styles.secondary}>
@@ -650,8 +665,20 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
           </div>
         </div>
 
+        {hasUnsettledSelection ? (
+          <StatusMessage tone="warning">
+            模型或封面仍在模拟传输或验证中。请等待模拟验证通过，或取消新选择后再保存；
+            已保存的资源绑定不会被清除。
+          </StatusMessage>
+        ) : null}
+
         <div className={styles.actions}>
-          <Button type="submit" variant="primary" className={styles.saveButton} disabled={saving}>
+          <Button
+            type="submit"
+            variant="primary"
+            className={styles.saveButton}
+            disabled={saving || hasUnsettledSelection}
+          >
             {saveLabel}
           </Button>
           {workId ? (
@@ -670,28 +697,5 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
         </div>
       </form>
     </div>
-  )
-}
-
-function CoverPreview({ coverUrl }: { coverUrl: string | null }) {
-  const [failed, setFailed] = useState(false)
-
-  if (coverUrl && !failed) {
-    return (
-      <div className={styles.coverBox}>
-        <img
-          className={styles.coverImage}
-          src={coverUrl}
-          alt="现有封面"
-          onError={() => setFailed(true)}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <p className={styles.coverFallback}>
-      {failed ? '现有封面加载失败' : '尚未绑定封面'}
-    </p>
   )
 }

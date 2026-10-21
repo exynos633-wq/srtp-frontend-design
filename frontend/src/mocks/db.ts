@@ -1,5 +1,6 @@
 import type { GeoPoint } from '../types/api'
 import type { CityOption, CityRef, Province } from '../types/city'
+import type { UploadAssetKind } from '../types/upload'
 import type { AdminWork, ModelFormat, WorkStatus } from '../types/work'
 import type { SessionUser } from '../api/auth'
 
@@ -20,12 +21,29 @@ export interface MockWork extends AdminWork {
   placeholder: boolean
 }
 
+/** 仅开发 Mock 的上传登记；status 由 handler 按 elapsed 推导。 */
+export interface MockUploadRecord {
+  assetId: string
+  /** 仅种子/既有绑定资源直接 ready；新模拟上传必须经过 receiving/validating。 */
+  seeded: boolean
+  kind: UploadAssetKind
+  originalName: string
+  sizeBytes: number
+  createdAt: number
+  outcome: 'ready' | 'failed' | 'hold'
+  failureReason: string | null
+  modelFormat: ModelFormat | null
+}
+
 export interface MockDatabase {
   works: MockWork[]
+  /** 模拟服务端资源登记；种子资源与模拟上传共用。 */
+  uploads: MockUploadRecord[]
   provinces: Province[]
   cities: MockCity[]
   session: SessionUser | null
   sequence: number
+  uploadSequence: number
 }
 
 const PROVINCES: Province[] = [
@@ -197,13 +215,53 @@ function createSeedFixtures(): MockWork[] {
   ]
 }
 
+/** 已有作品引用的资源也是 Mock 登记的一部分；绑定校验不能接受未知编号。 */
+function createSeedUploads(works: MockWork[]): MockUploadRecord[] {
+  const uploads = new Map<string, MockUploadRecord>()
+
+  for (const work of works) {
+    if (work.modelAssetId) {
+      const format = work.modelFormat ?? 'glb'
+      uploads.set(work.modelAssetId, {
+        assetId: work.modelAssetId,
+        seeded: true,
+        kind: 'model',
+        originalName: `${work.id}.${format === 'gaussian-ply' ? 'ply' : 'glb'}`,
+        sizeBytes: 0,
+        createdAt: 0,
+        outcome: 'ready',
+        failureReason: null,
+        modelFormat: format,
+      })
+    }
+    if (work.coverAssetId) {
+      uploads.set(work.coverAssetId, {
+        assetId: work.coverAssetId,
+        seeded: true,
+        kind: 'cover',
+        originalName: `${work.id}-cover.svg`,
+        sizeBytes: 0,
+        createdAt: 0,
+        outcome: 'ready',
+        failureReason: null,
+        modelFormat: null,
+      })
+    }
+  }
+
+  return [...uploads.values()]
+}
+
 export function createSeedDatabase(): MockDatabase {
+  const works = [...createSeedWorks(), ...createSeedFixtures()]
   return {
-    works: [...createSeedWorks(), ...createSeedFixtures()],
+    works,
+    uploads: createSeedUploads(works),
     provinces: PROVINCES.map((item) => ({ ...item })),
     cities: CITIES.map((item) => ({ ...item })),
     session: null,
     sequence: 0,
+    uploadSequence: 0,
   }
 }
 
@@ -228,4 +286,9 @@ export function nextTimestamp(): string {
 export function nextWorkId(): string {
   database.sequence += 1
   return `work_mock_${String(database.sequence).padStart(3, '0')}`
+}
+
+export function nextUploadId(kind: UploadAssetKind): string {
+  database.uploadSequence += 1
+  return `asset_mock_upload_${kind}_${String(database.uploadSequence).padStart(3, '0')}`
 }

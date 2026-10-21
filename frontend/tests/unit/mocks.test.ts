@@ -144,19 +144,19 @@ describe('场景与错误语义', () => {
 
 describe('写入语义（cityId 省略／null、发布与资源占用）', () => {
   it.each([
-    ['asset_mock_model', 'glb'],
-    ['asset_mock_gaussian_ply', 'gaussian-ply'],
+    ['asset_demo_001_model', 'glb'],
+    ['asset_demo_003_model', 'gaussian-ply'],
   ] as const)('新建草稿保留资源 %s，读取和发布均使用原绑定', async (modelAssetId, modelFormat) => {
     await login({ username: 'admin', password: 'admin' })
     const created = await createAdminWork({
       name: '新建作品',
       description: '建筑介绍。',
       modelAssetId,
-      coverAssetId: 'asset_mock_cover',
+      coverAssetId: 'asset_demo_001_cover',
     })
     const expected = {
       modelAssetId,
-      coverAssetId: 'asset_mock_cover',
+      coverAssetId: 'asset_demo_001_cover',
       modelFormat,
       coverUrl: '/mock/placeholder-cover.svg',
       status: 'draft',
@@ -214,8 +214,8 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     await login({ username: 'admin', password: 'admin' })
     await updateAdminWork('work_draft_002', {
       description: '补全后的建筑介绍。',
-      modelAssetId: 'asset_mock_model',
-      coverAssetId: 'asset_mock_cover',
+      modelAssetId: 'asset_demo_001_model',
+      coverAssetId: 'asset_demo_001_cover',
     })
     const published = await publishAdminWork('work_draft_002')
     expect(published.status).toBe('published')
@@ -228,7 +228,7 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
   it('资源占用场景：替换模型返回 409', async () => {
     await login({ username: 'admin', password: 'admin' })
     setMockScenario('model-in-use')
-    await expectApiError(updateAdminWork('work_demo_001', { modelAssetId: 'asset_new' }), 409, 'MODEL_IN_USE')
+    await expectApiError(updateAdminWork('work_demo_001', { modelAssetId: 'asset_demo_002_model' }), 409, 'MODEL_IN_USE')
   })
 
   it('422 校验失败时不留下部分修改', async () => {
@@ -253,7 +253,7 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
 
     setMockScenario('model-in-use')
     await expectApiError(
-      updateAdminWork('work_demo_001', { name: '不该写入的名称', modelAssetId: 'asset_new' }),
+      updateAdminWork('work_demo_001', { name: '不该写入的名称', modelAssetId: 'asset_demo_002_model' }),
       409,
       'MODEL_IN_USE',
     )
@@ -261,6 +261,21 @@ describe('写入语义（cityId 省略／null、发布与资源占用）', () =>
     const after = await getAdminWork('work_demo_001')
     expect(after.name).toBe(before.name)
     expect(after.modelAssetId).toBe(before.modelAssetId)
+  })
+
+  it.each(['work_draft_002', 'work_offline_001'])('资源占用时清空模型也不留下部分修改：%s', async (id) => {
+    await login({ username: 'admin', password: 'admin' })
+    await updateAdminWork(id, { modelAssetId: 'asset_demo_001_model' })
+    const before = await getAdminWork(id)
+
+    setMockScenario('model-in-use')
+    await expectApiError(
+      updateAdminWork(id, { name: '清空失败时不应写入', modelAssetId: null }),
+      409,
+      'MODEL_IN_USE',
+    )
+
+    expect(await getAdminWork(id)).toEqual(before)
   })
 
   it('已发布作品保存后仍要满足发布条件', async () => {

@@ -1,7 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { ApiError } from '../api/http'
-import { clearAdminCache } from '../api/adminSession'
-import { queryKeys } from '../api/queryKeys'
+import { clearAdminCache, handleAdminAuthFailure } from '../api/adminSession'
 
 /**
  * 全局 Query 客户端配置：
@@ -17,9 +16,7 @@ export function createQueryClient() {
       return
     }
     if ((key?.[0] === 'admin' || key?.[0] === 'dictionary') && error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-      clearAdminCache(client)
-      client.setQueryData(queryKeys.auth.failure(), error)
-      client.setQueryData(queryKeys.auth.me(), null)
+      handleAdminAuthFailure(client, error)
     }
   }
   const client = new QueryClient({

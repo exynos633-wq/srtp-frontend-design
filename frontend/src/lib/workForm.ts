@@ -22,6 +22,14 @@ export interface WorkFormBaseline {
   description: string
   modelingNote: string | null
   cityId: string | null
+  modelAssetId: string | null
+  coverAssetId: string | null
+}
+
+/** 只放 ready 且尚未保存的新资源；undefined 表示没有新的待保存绑定。 */
+export interface WorkFormResources {
+  modelAssetId?: string
+  coverAssetId?: string
 }
 
 export const EMPTY_WORK_DRAFT: WorkFormDraft = {
@@ -37,6 +45,8 @@ export const EMPTY_WORK_BASELINE: WorkFormBaseline = {
   description: '',
   modelingNote: null,
   cityId: null,
+  modelAssetId: null,
+  coverAssetId: null,
 }
 
 /** 空文本按未填处理；名称与介绍在草稿中允许空字符串。 */
@@ -60,6 +70,8 @@ export function baselineFromAdminWork(work: AdminWork): WorkFormBaseline {
     description: work.description ?? '',
     modelingNote: nullableNote(work.modelingNote ?? ''),
     cityId: work.cityId,
+    modelAssetId: work.modelAssetId,
+    coverAssetId: work.coverAssetId,
   }
 }
 
@@ -73,23 +85,39 @@ export function isDraftDirty(draft: WorkFormDraft, baseline: WorkFormBaseline): 
   )
 }
 
-/** 新建草稿没有基线，提交当前字段；资源字段留空，不伪造 assetId。 */
-export function toCreateInput(draft: WorkFormDraft): WorkWriteInput {
-  return {
+/** 新建草稿没有基线，提交当前字段；没有 ready 新选择时不伪造 assetId。 */
+export function toCreateInput(
+  draft: WorkFormDraft,
+  resources: WorkFormResources = {},
+): WorkWriteInput {
+  const input: WorkWriteInput = {
     name: draft.name,
     description: draft.description,
     modelingNote: nullableNote(draft.modelingNote),
     cityId: draft.cityId,
   }
+  if (resources.modelAssetId !== undefined) input.modelAssetId = resources.modelAssetId
+  if (resources.coverAssetId !== undefined) input.coverAssetId = resources.coverAssetId
+  return input
 }
 
-/** 只发送实际修改的字段；未改 cityId 时省略，主动清空时显式 null。 */
-export function toPatchInput(draft: WorkFormDraft, baseline: WorkFormBaseline): WorkWriteInput {
+/** 只发送实际修改的字段；未改 cityId/资源时省略，主动清空时显式 null。 */
+export function toPatchInput(
+  draft: WorkFormDraft,
+  baseline: WorkFormBaseline,
+  resources: WorkFormResources = {},
+): WorkWriteInput {
   const input: WorkWriteInput = {}
   if (draft.name !== baseline.name) input.name = draft.name
   if (draft.description !== baseline.description) input.description = draft.description
   const note = nullableNote(draft.modelingNote)
   if (note !== baseline.modelingNote) input.modelingNote = note
   if (draft.cityId !== baseline.cityId) input.cityId = draft.cityId
+  if (resources.modelAssetId !== undefined && resources.modelAssetId !== baseline.modelAssetId) {
+    input.modelAssetId = resources.modelAssetId
+  }
+  if (resources.coverAssetId !== undefined && resources.coverAssetId !== baseline.coverAssetId) {
+    input.coverAssetId = resources.coverAssetId
+  }
   return input
 }
