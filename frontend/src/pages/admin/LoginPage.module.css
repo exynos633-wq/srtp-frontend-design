@@ -1,8 +1,8 @@
 .page {
   width: 100%;
-  max-width: 480px;
+  max-width: 544px;
   margin: 0 auto;
-  padding: var(--space-10) var(--page-padding);
+  padding: clamp(32px, 12vh, 120px) 0 var(--space-8);
 }
 
 .panel {
@@ -26,3 +26,5 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+
+.panel input { scroll-margin-block: 24px; }

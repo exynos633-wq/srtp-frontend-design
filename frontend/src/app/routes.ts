@@ -20,7 +20,7 @@ const WorkPreviewPage = lazy(() => import('../pages/admin/WorkPreviewPage'))
  * 首期路由表（工程设计/01）。
  *
  * 路由可被直接访问不代表有权限：真实的管理员权限由服务端校验，前端隐藏入口
- * 不构成安全边界。当前不做任何业务表单，也不做假认证。
+ * 不构成安全边界。认证由 /auth/me 检查；MSW 仅为显式启用的开发演示。
  */
 export const routes: RouteObject[] = [
   {

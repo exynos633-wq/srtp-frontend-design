@@ -8,6 +8,7 @@ export const queryKeys = {
   auth: {
     all: ['auth'] as const,
     me: () => [...queryKeys.auth.all, 'me'] as const,
+    failure: () => [...queryKeys.auth.all, 'failure'] as const,
   },
   works: {
     all: ['works'] as const,

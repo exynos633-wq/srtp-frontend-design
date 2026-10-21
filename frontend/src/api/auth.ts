@@ -19,8 +19,8 @@ export interface LoginInput {
  * - 有效期、Cookie 属性、CSRF 与跨域开发方式仍待后端确认；
  * - 登录失败与失效都由服务端返回 401，前端只展示，不做本地“假登录”。
  */
-export function login(input: LoginInput): Promise<SessionResponse> {
-  return apiRequest<SessionResponse>('/auth/login', { method: 'POST', body: input })
+export function login(input: LoginInput, signal?: AbortSignal): Promise<SessionResponse> {
+  return apiRequest<SessionResponse>('/auth/login', { method: 'POST', body: input, signal })
 }
 
 /** 当前会话；未登录或已失效返回 401。 */

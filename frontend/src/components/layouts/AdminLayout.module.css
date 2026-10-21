@@ -39,9 +39,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-5);
+  align-items: center;
+  padding-block: var(--space-3);
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
   color: var(--color-text-secondary);
   font-size: var(--text-label);
   line-height: var(--leading-label);

@@ -1,4 +1,4 @@
-import { HttpResponse, http } from 'msw'
+import { delay, HttpResponse, http } from 'msw'
 import type { SessionUser } from '../api/auth'
 import type { ApiErrorBody } from '../types/api'
 import type { AdminWork, ModelFormat } from '../types/work'
@@ -32,6 +32,7 @@ function currentSession(): SessionUser | null {
 
 /** 管理接口统一入口：场景“登录失效”时，即使有会话也返回 401。 */
 function requireSession(): SessionUser | null | Response {
+  if (getMockScenario() === 'auth-forbidden') return fail(403, 'FORBIDDEN', '当前管理员无权访问此资源。')
   if (getMockScenario() === 'auth-expired') {
     return fail(401, 'UNAUTHENTICATED', '登录已失效，请重新登录。')
   }
@@ -132,6 +133,8 @@ export const handlers = [
   }),
 
   http.post(/\/api\/auth\/login$/, async ({ request }) => {
+    await delay(400)
+    if (getMockScenario() === 'login-error') return fail(401, 'INVALID_CREDENTIALS', '账号或密码不正确。')
     const body = await readJson(request)
     if (!body) return fail(422, 'VALIDATION_FAILED', '请填写账号与密码。')
     const { username, password } = body
@@ -143,7 +146,9 @@ export const handlers = [
     return HttpResponse.json({ user: session })
   }),
 
-  http.get(/\/api\/auth\/me$/, () => {
+  http.get(/\/api\/auth\/me$/, async () => {
+    await delay(150)
+    if (getMockScenario() === 'auth-forbidden') return fail(403, 'FORBIDDEN', '当前管理员无权访问此资源。')
     if (getMockScenario() === 'auth-expired') return fail(401, 'UNAUTHENTICATED', '登录已失效，请重新登录。')
     const session = currentSession()
     if (!session) return fail(401, 'UNAUTHENTICATED', '未登录。')

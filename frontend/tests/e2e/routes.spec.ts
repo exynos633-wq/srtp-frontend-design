@@ -17,17 +17,18 @@ const routes = [
 for (const route of routes) {
   test(`直接访问并刷新 ${route.path}`, async ({ page }) => {
     await page.goto(route.path)
-    await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
+    const heading = route.path.startsWith('/admin/') && route.path !== '/admin/login' ? '管理员登录' : route.heading
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible()
 
     await page.reload()
-    await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible()
   })
 }
 
-test('/admin 重定向到作品管理', async ({ page }) => {
+test('/admin 未登录进入登录页', async ({ page }) => {
   await page.goto('/admin')
-  await expect(page).toHaveURL(/\/admin\/works$/)
-  await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/login\?returnTo=/)
+  await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible()
 })
 
 test('导航链接在客户端切换页面', async ({ page }) => {
