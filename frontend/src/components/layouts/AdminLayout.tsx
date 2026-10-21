@@ -10,6 +10,7 @@ import { Button } from '../ui/Button'
 import { StatusMessage } from '../ui/StatusMessage'
 import { appConfig } from '../../app/env'
 import { classNames } from '../../lib/classNames'
+import { confirmActiveLeave, allowActiveLeaveNavigation, resetActiveLeaveConsent } from '../../lib/leaveGuard'
 import { MockBadge } from '../../mocks/MockBadge'
 import { SkipLink } from '../ui/SkipLink'
 import styles from './AdminLayout.module.css'
@@ -27,6 +28,8 @@ export default function AdminLayout() {
   const [error, setError] = useState('')
   async function signOut() {
     if (busy.current) return
+    // 必须在 logout、清缓存和卸载表单之前确认；拒绝时零退出请求。
+    if (!confirmActiveLeave()) return
     busy.current = true
     setLeaving(true)
     setError('')
@@ -34,8 +37,11 @@ export default function AdminLayout() {
       await logout()
       clearAdminCache(client)
       client.removeQueries({ queryKey: queryKeys.auth.all })
+      // 退出成功只放行这一次到登录页的跳转；等待期间的其他导航仍受表单 guard 约束。
+      allowActiveLeaveNavigation('/admin/login')
       await navigate('/admin/login', { replace: true })
     } catch (failure) {
+      resetActiveLeaveConsent()
       if (failure instanceof ApiError && (failure.status === 401 || failure.status === 403)) {
         clearAdminCache(client)
         client.setQueryData(queryKeys.auth.failure(), failure)
@@ -75,7 +81,13 @@ export default function AdminLayout() {
               <Button disabled={leaving} onClick={() => void signOut()}>{leaving ? '正在退出…' : '退出登录'}</Button>
             </nav>
             {error && <StatusMessage tone="error">{error}</StatusMessage>}
-            <Outlet />
+            <div
+              data-admin-outlet
+              inert={leaving ? true : undefined}
+              aria-busy={leaving || undefined}
+            >
+              <Outlet />
+            </div>
           </AdminGate>}
         </Suspense>
       </main>

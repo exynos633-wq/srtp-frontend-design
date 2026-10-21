@@ -33,7 +33,7 @@ test('管理列表区分三种状态，入口完整，发布与下架明确不�
   await expect(table).toBeVisible()
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeFocused()
   await expect(page.getByText(/发布与下架入口暂不可用/)).toBeVisible()
-  await expect(page.getByText(/表单与保存功能尚未接入/)).toBeVisible()
+  await expect(page.getByText(/新建与编辑表单已可保存草稿和更新资料/)).toBeVisible()
 
   const published = table.getByRole('row', { name: /院落模型/ })
   await expect(published.getByText('已发布', { exact: true })).toBeVisible()
@@ -88,7 +88,7 @@ test('管理列表空状态与失败重试，登录不被列表故障阻断', as
   await signIn(page)
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
   await expect(page.getByText(/管理列表暂无作品/)).toBeVisible()
-  await expect(page.getByText(/表单与草稿保存功能尚未接入/)).toBeVisible()
+  await expect(page.getByText(/可先新建草稿/)).toBeVisible()
   await expect(page.getByRole('link', { name: '新建作品', exact: true })).toBeVisible()
   await expect(page.getByRole('table', { name: '管理作品列表' })).toHaveCount(0)
 

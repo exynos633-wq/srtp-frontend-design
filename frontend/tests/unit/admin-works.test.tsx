@@ -87,7 +87,7 @@ describe('P10 管理作品列表', () => {
     expect(within(table).getAllByText('已下架')).toHaveLength(1)
     expect(within(table).getAllByText('缺封面')).toHaveLength(3)
     expect(screen.getByText(/发布与下架入口暂不可用/)).toBeVisible()
-    expect(screen.getByText(/表单与保存功能尚未接入/)).toBeVisible()
+    expect(screen.getByText(/新建与编辑表单已可保存草稿和更新资料/)).toBeVisible()
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('button', { name: /删除/ })).toBeNull()
 
@@ -112,7 +112,7 @@ describe('P10 管理作品列表', () => {
     renderAt('/admin/works')
 
     expect(await screen.findByText(/管理列表暂无作品/)).toBeVisible()
-    expect(screen.getByText(/表单与草稿保存功能尚未接入/)).toBeVisible()
+    expect(screen.getByText(/可先新建草稿/)).toBeVisible()
     expect(screen.getByRole('link', { name: '新建作品' })).toHaveAttribute(
       'href',
       '/admin/works/new',
