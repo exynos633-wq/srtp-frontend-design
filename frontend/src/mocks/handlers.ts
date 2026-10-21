@@ -441,6 +441,16 @@ export const handlers = [
     const body = await readJson(request)
     if (!body) return fail(422, 'VALIDATION_FAILED', '请求体格式不正确。')
 
+    if (
+      work.status === 'published' &&
+      (hasOwn(body, 'modelAssetId') || hasOwn(body, 'coverAssetId'))
+    ) {
+      const field = hasOwn(body, 'modelAssetId') ? 'modelAssetId' : 'coverAssetId'
+      return fail(409, 'WORK_PUBLISHED', '已发布作品需先下架后才能替换模型或封面。', {
+        [field]: '请先下架作品后再替换资源。',
+      })
+    }
+
     // 先在副本上应用字段并完成全部校验，成功后再一次性写回；
     // 否则后面的校验失败时，前面的赋值已经生效，会出现“提示保存失败但数据已变”。
     const next: MockWork = { ...work }
@@ -532,6 +542,10 @@ export const handlers = [
     if (session instanceof Response) return session
     const work = getDatabase().works.find((item) => item.id === String(params[0]))
     if (!work) return fail(404, 'WORK_NOT_FOUND', '作品不存在。')
+    if (work.status === 'published') {
+      // 重复发布到同一状态是幂等的，不刷新发布时间或更新时间。
+      return HttpResponse.json(toWriteResult(work))
+    }
     if (getMockScenario() === 'validation-failure') {
       return fail(422, 'VALIDATION_FAILED', '发布前请补全必填内容。', { description: '建筑介绍不能为空。' })
     }
@@ -569,6 +583,10 @@ export const handlers = [
     if (session instanceof Response) return session
     const work = getDatabase().works.find((item) => item.id === String(params[0]))
     if (!work) return fail(404, 'WORK_NOT_FOUND', '作品不存在。')
+    if (work.status === 'offline') {
+      // 重复下架同样幂等，不制造新的 updatedAt。
+      return HttpResponse.json(toWriteResult(work))
+    }
     work.status = 'offline'
     work.updatedAt = nextTimestamp()
     return HttpResponse.json(toWriteResult(work))

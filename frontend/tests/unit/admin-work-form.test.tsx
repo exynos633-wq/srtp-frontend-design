@@ -755,15 +755,15 @@ describe('P11 新建与编辑表单', () => {
     expect(client.getQueryData(queryKeys.admin.work('work_demo_001'))).toBeUndefined()
   })
 
-  it('发布与下架边界仍明确：表单只保存，不出现可用的发布或下架动作', async () => {
+  it('草稿可手动发布但保存按钮不会自动发布，已发布显示下架入口', async () => {
     await login({ username: 'admin', password: 'admin' })
     renderAt('/admin/works/work_draft_001/edit')
     await screen.findByLabelText('作品名称')
 
     expect(screen.getByRole('button', { name: '保存草稿' })).toBeEnabled()
-    expect(screen.queryByRole('button', { name: /^发布/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /下架/ })).toBeNull()
-    expect(screen.getByText(/发布与下架入口暂不可用/)).toBeVisible()
+    expect(screen.getByRole('button', { name: '发布作品' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '下架作品' })).toBeNull()
+    expect(screen.getByText(/发布与下架以服务端结果为准/)).toBeVisible()
     expect(screen.getByText('模型资源')).toBeVisible()
     expect(screen.getByLabelText('选择模型文件')).toBeInTheDocument()
     expect(screen.getByLabelText('选择封面文件')).toBeInTheDocument()

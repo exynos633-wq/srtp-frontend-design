@@ -33,13 +33,13 @@ export const queryKeys = {
 } as const
 
 /**
- * 作品变更后需要失效的范围：公开列表、详情、地球城市与相关城市模型。
- * 具体城市列表用 `invalidateQueries({ queryKey: queryKeys.globe.all })` 一并覆盖。
+ * 服务端已提交作品变更后必须失效的公开范围：列表、详情、地球城市与相关城市模型。
+ * 即使发起请求的会话已退出，也要执行；不能因私有缓存保护而留下旧公开内容。
  */
-export function invalidateAfterWorkChange() {
-  return [
-    queryKeys.works.all,
-    queryKeys.globe.all,
-    queryKeys.admin.all,
-  ] as const
-}
+export const publicWorkInvalidationKeys = [
+  queryKeys.works.all,
+  queryKeys.globe.all,
+] as const
+
+/** 私有管理缓存；只在会话仍有效时失效，且不得在退出后回填数据。 */
+export const adminWorkInvalidationKeys = [queryKeys.admin.all] as const

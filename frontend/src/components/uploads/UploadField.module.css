@@ -5,6 +5,13 @@
   scroll-margin-block: var(--space-6);
 }
 
+/* 发布校验失败会用脚本聚焦整个字段组；错误状态下给出可见焦点环。 */
+.field[data-error='true']:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-control);
+}
+
 .head {
   display: flex;
   flex-wrap: wrap;

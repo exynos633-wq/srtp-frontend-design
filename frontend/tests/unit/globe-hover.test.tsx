@@ -117,4 +117,27 @@ describe('城市点位悬停计时', () => {
     advance(1)
     expect(bubble()).not.toBeNull()
   })
+  it('城市最后一件作品移出后关闭气泡并把焦点交给地球舞台', () => {
+    const cities = [{
+      id: '440300',
+      name: '深圳市',
+      province: { id: '440000', name: '广东省' },
+      center: { latitude: 22.54, longitude: 114.06 },
+      workCount: 1,
+    }]
+    const { container, rerender } = render(
+      <GlobeExperience cities={cities} reducedMotion />,
+    )
+    const point = container.querySelector<HTMLButtonElement>('[data-city-point]')!
+    enter(point)
+    advance(120)
+    expect(container.querySelector('[data-city-bubble]')).not.toBeNull()
+
+    rerender(<GlobeExperience cities={[]} reducedMotion />)
+    advance(0)
+
+    expect(container.querySelector('[data-city-bubble]')).toBeNull()
+    expect(container.querySelector('[data-globe-stage]')).toHaveFocus()
+  })
+
 })

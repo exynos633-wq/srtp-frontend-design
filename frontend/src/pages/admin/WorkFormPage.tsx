@@ -2,12 +2,18 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { FormEvent } from 'react'
 import { Link, useBlocker, useNavigate } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createAdminWork, getAdminWork, updateAdminWork } from '../../api/adminWorks'
+import {
+  createAdminWork,
+  getAdminWork,
+  publishAdminWork,
+  unpublishAdminWork,
+  updateAdminWork,
+} from '../../api/adminWorks'
 import { listCities, listProvinces } from '../../api/dictionary'
 import { isApiError } from '../../api/http'
 import { isUploadSimulationEnabled } from '../../api/mockUploads'
 import { isMocksActive } from '../../app/mocksStatus'
-import { invalidateAfterWorkChange, queryKeys } from '../../api/queryKeys'
+import { adminWorkInvalidationKeys, publicWorkInvalidationKeys, queryKeys } from '../../api/queryKeys'
 import { UploadField } from '../../components/uploads/UploadField'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -195,6 +201,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState('')
   const [savedMessage, setSavedMessage] = useState('')
+  const [actionPending, setActionPending] = useState<'publish' | 'unpublish' | null>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
 
   const uploadsEnabled = isUploadSimulationEnabled(import.meta.env.DEV, isMocksActive())
@@ -203,13 +210,14 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   const status = work?.status ?? 'draft'
   const hasUnsavedSelection = modelUpload.selection !== null || coverUpload.selection !== null
   const hasUnsettledSelection = modelUpload.hasUnsettled || coverUpload.hasUnsettled
-  const resourceEditingDisabled = saving || !uploadsEnabled || status !== 'draft'
+  const formLocked = saving || actionPending !== null
+  const resourceEditingDisabled = formLocked || !uploadsEnabled || status === 'published'
   const resourceDisabledReason = !uploadsEnabled
     ? '当前环境未开放上传；正式上传协议与校验规则待确认。'
-    : status !== 'draft'
-      ? '已发布或已下架作品的资源替换尚未开放；本页只更新资料。'
-      : saving
-        ? '正在保存，完成后再选择文件。'
+    : status === 'published'
+      ? '已发布作品不可直接替换模型或封面，请先下架。'
+      : formLocked
+        ? '正在处理，完成后再选择文件。'
         : undefined
 
   // 通过 MutationCache 的 admin mutationKey 走现有 401/403 清理与 AuthGate 通知。
@@ -218,6 +226,11 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     mutationFn: ({ id, input }: { id: string | null; input: WorkWriteInput }) =>
       id ? updateAdminWork(id, input) : createAdminWork(input),
   })
+  const actionMutation = useMutation({
+    mutationKey: queryKeys.admin.works(),
+    mutationFn: ({ id, action }: { id: string; action: 'publish' | 'unpublish' }) =>
+      action === 'publish' ? publishAdminWork(id) : unpublishAdminWork(id),
+  })
 
   useLayoutEffect(() => {
     // 新建或编辑确认后，焦点落在页面标题，便于从任务起点开始键盘操作。
@@ -225,6 +238,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   }, [])
 
   const savingRef = useRef(false)
+  const actionBusyRef = useRef(false)
   const createdIdRef = useRef<string | null>(null)
   const mountedRef = useRef(true)
   const allowedNavigationRef = useRef<string | null>(null)
@@ -328,8 +342,8 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   const provincesLoading = provincesQuery.isPending
   const citiesLoading = provinceId !== null && citiesQuery.isPending
   const citySelectDisabled =
-    saving || provinceId === null || provincesLoading || citiesLoading
-  const clearCityDisabled = saving || draft.cityId === null
+    formLocked || provinceId === null || provincesLoading || citiesLoading
+  const clearCityDisabled = formLocked || draft.cityId === null
 
   function clearFeedback() {
     setFormError('')
@@ -370,7 +384,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (savingRef.current) return
+    if (savingRef.current || actionBusyRef.current) return
 
     if (hasUnsettledSelection) {
       setFormError('模型或封面仍在模拟传输或验证中，请等待模拟验证通过或取消新选择后再保存。')
@@ -403,11 +417,15 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
         input: existingId ? (patch ?? {}) : toCreateInput(draft, resources),
       })
 
-      // 退回登录页后不得把迟到结果写回任何管理缓存；未挂载时只失效公开/列表，
+      // 服务端已提交：公开缓存先失效，即使本次保存已在退出过程中完成。
+      for (const queryKey of publicWorkInvalidationKeys) {
+        void client.invalidateQueries({ queryKey })
+      }
+      // 退回登录页后不得把迟到结果写回任何管理缓存；未挂载时只失效私有管理键，
       // 不写私有草稿，避免重新登录后旧请求恢复上一会话的敏感内容。
       if (client.getQueryData(queryKeys.auth.me()) == null) return
       if (!mountedRef.current) {
-        for (const queryKey of invalidateAfterWorkChange()) {
+        for (const queryKey of adminWorkInvalidationKeys) {
           void client.invalidateQueries({ queryKey })
         }
         return
@@ -415,7 +433,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
 
       if (!existingId) createdIdRef.current = saved.id
       client.setQueryData(queryKeys.admin.work(saved.id), saved)
-      for (const queryKey of invalidateAfterWorkChange()) {
+      for (const queryKey of adminWorkInvalidationKeys) {
         void client.invalidateQueries({ queryKey })
       }
 
@@ -454,6 +472,105 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
     }
   }
 
+  function focusFormAction() {
+    const action = document.querySelector<HTMLButtonElement>('[data-work-action]')
+    if (action && !action.disabled) {
+      action.focus({ preventScroll: true })
+      return
+    }
+    // 下架后仍有未保存修改时发布按钮不可用，把焦点交给保存按钮。
+    document
+      .querySelector<HTMLButtonElement>('[data-work-save]')
+      ?.focus({ preventScroll: true })
+  }
+
+  function focusFormSave() {
+    document
+      .querySelector<HTMLButtonElement>('[data-work-save]')
+      ?.focus({ preventScroll: true })
+  }
+
+  async function runAction(action: 'publish' | 'unpublish') {
+    if (!workId || !work || savingRef.current || actionBusyRef.current) return
+    const name = work.name?.trim() || '未命名作品'
+
+    if (action === 'publish') {
+      if (dirty || hasUnsettledSelection) {
+        setFormError('发布前请先保存当前修改或取消未保存文件；保存不会自动发布。')
+        setSavedMessage('')
+        focusFormSave()
+        return
+      }
+    } else {
+      const confirmedByUser = window.confirm(
+        `确定下架《${name}》吗？下架后公开目录和城市列表会立即移除该作品。`,
+      )
+      if (!confirmedByUser) {
+        focusFormAction()
+        return
+      }
+    }
+
+    actionBusyRef.current = true
+    setActionPending(action)
+    setFormError('')
+    setFieldErrors({})
+    setSavedMessage('')
+
+    try {
+      const saved = await actionMutation.mutateAsync({ id: workId, action })
+
+      // 服务端已提交：公开缓存先失效，即使本页已在退出过程中卸载。
+      for (const queryKey of publicWorkInvalidationKeys) {
+        void client.invalidateQueries({ queryKey })
+      }
+      if (client.getQueryData(queryKeys.auth.me()) == null) return
+      if (!mountedRef.current) {
+        for (const queryKey of adminWorkInvalidationKeys) {
+          void client.invalidateQueries({ queryKey })
+        }
+        return
+      }
+
+      client.setQueryData(queryKeys.admin.work(saved.id), saved)
+      for (const queryKey of adminWorkInvalidationKeys) {
+        void client.invalidateQueries({ queryKey })
+      }
+      setWork(saved)
+
+      // 下架不保存未提交文本/文件，不能把本地 dirty 输入覆盖成服务端旧值。
+      if (action === 'publish') {
+        setDraft(draftFromAdminWork(saved))
+        setBaseline(baselineFromAdminWork(saved))
+        modelUpload.clearAfterSave()
+        coverUpload.clearAfterSave()
+      }
+
+      setSavedMessage(
+        action === 'publish'
+          ? '已发布作品，公开目录和城市列表已更新。'
+          : '已下架作品，公开目录和城市列表已更新。',
+      )
+      window.setTimeout(focusFormAction, 0)
+    } catch (error) {
+      if (!mountedRef.current) return
+      if (isApiError(error)) {
+        if (error.status === 401 || error.status === 403) return
+        const fields = error.fields ?? {}
+        setFieldErrors(fields)
+        setFormError(error.message)
+        if (Object.keys(fields).length > 0) focusFirstServerError(fields)
+        else window.setTimeout(focusFormAction, 0)
+      } else {
+        setFormError('发布或下架未完成，请稍后手动重试。')
+        window.setTimeout(focusFormAction, 0)
+      }
+    } finally {
+      actionBusyRef.current = false
+      if (mountedRef.current) setActionPending(null)
+    }
+  }
+
   const saveLabel = saving
     ? '正在保存…'
     : status === 'published'
@@ -473,7 +590,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
           description={
             isNew
               ? '可以只填一部分保存草稿。模型或封面要等模拟验证通过后才能绑定；保存不会自动发布。'
-              : '保存会更新本页资料与已验证通过的新资源绑定。已发布作品不会自动发布或下架，资源替换尚未开放。'
+              : '保存会更新本页资料与已验证通过的新资源绑定。已发布作品需先下架才能替换资源；保存和上传不会自动发布。'
           }
         />
         <BackLink />
@@ -492,7 +609,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
 
       {status === 'published' ? (
         <StatusMessage tone="info">
-          该作品正在公开展示。保存会更新公开内容并重新检查发布必填项，但不会下架作品。
+          该作品正在公开展示。保存会更新公开内容并重新检查发布必填项，但不会下架作品；资源替换需先下架。
         </StatusMessage>
       ) : null}
 
@@ -510,7 +627,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
               name="name"
               autoComplete="off"
               value={draft.name}
-              readOnly={saving}
+              readOnly={formLocked}
               onChange={(event) => changeDraft({ name: event.target.value })}
             />
 
@@ -520,7 +637,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
                   id="work-province"
                   label="省份（选填）"
                   value={draft.provinceId ?? ''}
-                  disabled={saving || provincesLoading}
+                  disabled={formLocked || provincesLoading}
                   onChange={(event) => changeProvince(event.target.value)}
                 >
                   <option value="">
@@ -648,7 +765,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
               name="description"
               rows={6}
               value={draft.description}
-              readOnly={saving}
+              readOnly={formLocked}
               onChange={(event) => changeDraft({ description: event.target.value })}
             />
             <TextareaField
@@ -659,7 +776,7 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
               name="modelingNote"
               rows={4}
               value={draft.modelingNote}
-              readOnly={saving}
+              readOnly={formLocked}
               onChange={(event) => changeDraft({ modelingNote: event.target.value })}
             />
           </div>
@@ -672,15 +789,47 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
           </StatusMessage>
         ) : null}
 
+        {dirty && !hasUnsettledSelection && !isNew ? (
+          <StatusMessage tone="warning">
+            {status === 'published'
+              ? '有未保存修改。下架不会保存这些修改；如需更新公开内容请先保存。'
+              : '发布前请先保存当前修改或取消未保存文件；保存不会自动发布。'}
+          </StatusMessage>
+        ) : null}
+
         <div className={styles.actions}>
           <Button
             type="submit"
             variant="primary"
+            data-work-save
             className={styles.saveButton}
-            disabled={saving || hasUnsettledSelection}
+            disabled={formLocked || hasUnsettledSelection}
           >
             {saveLabel}
           </Button>
+          {workId ? (
+            status === 'published' ? (
+              <Button
+                data-work-action
+                disabled={formLocked}
+                onClick={() => void runAction('unpublish')}
+              >
+                {actionPending === 'unpublish' ? '正在下架…' : '下架作品'}
+              </Button>
+            ) : (
+              <Button
+                data-work-action
+                disabled={formLocked || dirty || hasUnsettledSelection}
+                onClick={() => void runAction('publish')}
+              >
+                {actionPending === 'publish' ? '正在发布…' : '发布作品'}
+              </Button>
+            )
+          ) : (
+            <Button disabled title="请先保存草稿，再进入编辑页发布">
+              发布作品
+            </Button>
+          )}
           {workId ? (
             <Link className={styles.actionLink} to={`/admin/works/${workId}/preview`}>
               管理员预览
@@ -691,8 +840,8 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
             </Button>
           )}
           <p className={styles.boundary}>
-            发布与下架入口暂不可用；保存不会自动发布或下架作品。站内离开会先确认；
-            刷新或关闭页面的提示由浏览器决定。
+            发布与下架以服务端结果为准；保存和上传不会自动发布。发布前需先保存当前修改；
+            站内离开会先确认；刷新或关闭页面的提示由浏览器决定。
           </p>
         </div>
       </form>

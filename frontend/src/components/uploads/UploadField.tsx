@@ -75,6 +75,7 @@ export function UploadField({
       id={id}
       tabIndex={-1}
       aria-labelledby={headingId}
+      data-error={error ? 'true' : undefined}
     >
       <div className={styles.head}>
         <h2 className={styles.title} id={headingId}>

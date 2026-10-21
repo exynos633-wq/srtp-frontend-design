@@ -114,6 +114,7 @@ test('验证中不能保存，取消新选择恢复旧绑定与保存按钮', as
   await selectModel(page)
   await expect(page.getByText('模拟服务端验证中')).toBeVisible()
   await expect(page.getByRole('button', { name: '保存草稿' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '发布作品' })).toBeDisabled()
   await expect(page.getByText(/模型或封面仍在模拟传输或验证中/)).toBeVisible()
 
   await page.getByRole('button', { name: '取消新模型' }).click()
@@ -232,7 +233,7 @@ test('已发布作品不开放资源替换，仍可保存资料', async ({ page 
   await openAdmin(page)
   await page.getByRole('link', { name: '编辑 院落模型', exact: true }).click()
   await expect(page.getByLabel('作品名称')).toHaveValue('院落模型')
-  await expect(page.getByText('已发布或已下架作品的资源替换尚未开放；本页只更新资料。')).toHaveCount(2)
+  await expect(page.getByText('已发布作品不可直接替换模型或封面，请先下架。')).toHaveCount(2)
   await expect(page.locator('input[aria-label="选择模型文件"]')).toHaveCount(0)
   await expect(page.locator('input[aria-label="选择封面文件"]')).toHaveCount(0)
 

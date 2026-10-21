@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, useLocation } from 'react-router'
 import type { ReactNode } from 'react'
@@ -25,8 +26,16 @@ export default function AdminGate({ children }: { children: ReactNode }) {
   const failure = useQuery<ApiError | null>({
     queryKey: queryKeys.auth.failure(), queryFn: () => null, enabled: false,
   }).data
-  if (session.isFetching || session.isPending) return <StatusMessage>正在检查管理员会话…</StatusMessage>
   const error = failure ?? session.error
+
+  useEffect(() => {
+    if (!(error instanceof ApiError)) return
+    if (error.status !== 401 && error.status !== 403) return
+    // 子表单卸载后再清一次，覆盖活跃字典查询在跳转前被重新创建的竞态。
+    clearAdminCache(client)
+  }, [client, error])
+
+  if (session.isFetching || session.isPending) return <StatusMessage>正在检查管理员会话…</StatusMessage>
   if (error instanceof ApiError && error.status === 403) {
     return <StatusMessage tone="error">无权访问此管理路径（403）。当前路径已保留，请联系管理员核对权限。<Button onClick={() => { client.setQueryData(queryKeys.auth.failure(), null); void session.refetch() }}>重新检查认证</Button></StatusMessage>
   }
