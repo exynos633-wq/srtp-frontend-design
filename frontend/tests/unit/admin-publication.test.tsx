@@ -171,7 +171,7 @@ describe('P13 发布、下架与公开生命周期', () => {
     fireEvent.click(publish)
     fireEvent.click(publish)
     expect(await screen.findByRole('button', { name: '正在发布…' })).toBeDisabled()
-    expect(publishRequests).toBe(1)
+    await waitFor(() => expect(publishRequests).toBe(1))
 
     await act(async () => {
       releasePublish()
