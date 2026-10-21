@@ -97,9 +97,10 @@ describe('首期路由表', () => {
 
   it('/admin/works/:id/edit 携带作品编号进入编辑页', async () => {
     await login({ username: 'admin', password: 'admin' })
-    renderAt('/admin/works/demo-001/edit')
+    renderAt('/admin/works/work_draft_001/edit')
     expect(await screen.findByRole('heading', { name: '编辑作品' })).toBeVisible()
-    expect(screen.getByText(/demo-001/)).toBeVisible()
+    expect(screen.getByText(/WORK work_draft_001/)).toBeVisible()
+    expect(await screen.findByLabelText('作品名称')).toHaveValue('未命名草稿')
   })
 
   it('/admin 重定向到 /admin/works', async () => {

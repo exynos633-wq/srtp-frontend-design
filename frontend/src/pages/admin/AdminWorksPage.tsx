@@ -138,7 +138,7 @@ export default function AdminWorksPage() {
 
       <StatusMessage tone="info">
         <span id={PUBLISH_BOUNDARY_ID}>
-          发布与下架入口暂不可用，本页不会提交变更。新建与编辑入口暂时只保留导航；表单与保存功能尚未接入。
+          发布与下架入口暂不可用，本页不会提交变更。新建与编辑表单已可保存草稿和更新资料。
         </span>
       </StatusMessage>
 
@@ -165,7 +165,7 @@ export default function AdminWorksPage() {
       {confirmed && works.length === 0 ? (
         <div className={styles.state}>
           <StatusMessage tone="info">
-            管理列表暂无作品。新建作品入口暂时只保留导航；表单与草稿保存功能尚未接入。
+            管理列表暂无作品。可先新建草稿；发布与下架入口暂不可用。
           </StatusMessage>
         </div>
       ) : null}

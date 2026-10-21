@@ -1,0 +1,322 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 1120px;
+  padding-top: var(--space-6);
+}
+
+.statePage {
+  max-width: 960px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.head > header {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* 返回是导航，视觉沿用次要操作，语义仍是链接。 */
+.backLink,
+.actionLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-label);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.backLink {
+  margin-top: var(--space-8);
+}
+
+.backLink:hover,
+.actionLink:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  font-weight: var(--weight-label);
+  white-space: nowrap;
+}
+
+.status[data-status='published'] {
+  border-color: var(--color-success-bg);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.dirty {
+  color: var(--color-warning-text);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* <1024 按任务顺序单列：名称/城市 → 模型/封面 → 介绍/说明 → 操作。 */
+.layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.primary,
+.secondary {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.cityGroup {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cityRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.clearCityWrap {
+  padding-bottom: 0;
+}
+
+.clearCity {
+  min-height: var(--control-height);
+}
+
+.cityHint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.inlineButton {
+  margin-left: var(--space-2);
+}
+
+.resourcePanel {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  min-width: 0;
+  padding: var(--panel-padding);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-panel);
+}
+
+.resourceGroup {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  scroll-margin-block: var(--space-6);
+}
+
+.resourceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.resourceTitle {
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+}
+
+.requiredTag {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+}
+
+.resourceMeta {
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  overflow-wrap: anywhere;
+}
+
+.resourceHint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.fieldError {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.coverBox,
+.coverFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-panel);
+  background: var(--color-image-bed);
+  overflow: hidden;
+}
+
+.coverFallback {
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: center;
+}
+
+.coverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-line);
+}
+
+.saveButton {
+  min-width: 220px;
+}
+
+.boundary {
+  flex: 1 1 260px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.stateTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-heading);
+  overflow-wrap: anywhere;
+}
+
+.stateTitle:focus {
+  outline: none;
+}
+
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas:
+      'primary resources'
+      'secondary resources';
+    align-items: start;
+  }
+
+  .primary {
+    grid-area: primary;
+  }
+
+  .secondary {
+    grid-area: secondary;
+  }
+
+  .resourcePanel {
+    grid-area: resources;
+  }
+}
+
+@media (max-width: 767px) {
+  .cityRow {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .clearCityWrap {
+    justify-self: start;
+  }
+
+  .backLink {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+
+  .saveButton {
+    min-width: 0;
+  }
+
+  .boundary {
+    flex: initial;
+  }
+}

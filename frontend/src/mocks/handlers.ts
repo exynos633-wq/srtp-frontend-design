@@ -166,7 +166,7 @@ export const handlers = [
     return HttpResponse.json({ items: getDatabase().provinces })
   }),
 
-  http.get(/\/api\/admin\/cities$/, ({ request }) => {
+  http.get(/\/api\/admin\/cities(?:\?.*)?$/, ({ request }) => {
     const session = requireSession()
     if (session instanceof Response) return session
     const provinceId = new URL(request.url).searchParams.get('provinceId')
