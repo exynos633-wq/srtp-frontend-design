@@ -9,6 +9,7 @@ import { ExhibitionLight } from '../components/ui/ExhibitionLight'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { WorkCard, type WorkCardOpenSource } from '../components/works/WorkCard'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
+import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
 import {
   rememberCoverSource,
   rememberDirectoryReturn,
@@ -37,6 +38,7 @@ function DirectorySkeleton() {
 export default function WorksPage() {
   const pageRef = useRef<HTMLDivElement>(null)
   const restoredRef = useRef(false)
+  const reducedMotion = usePrefersReducedMotion()
 
   const { data, isPending, isError, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.works.list(),
@@ -144,7 +146,7 @@ export default function WorksPage() {
 
   // 滚动视差只写 CSS 变量，不移动卡片本身，避免影响 Flip 起点矩形与点击命中。
   useEffect(() => {
-    if (works.length === 0 || prefersReducedMotion()) return
+    if (works.length === 0 || reducedMotion) return
     const root = pageRef.current
     if (!root) return
     let frame = 0
@@ -174,7 +176,7 @@ export default function WorksPage() {
       window.removeEventListener('resize', schedule)
       for (const card of cards) card.style.removeProperty('--parallax')
     }
-  }, [works.length])
+  }, [works.length, reducedMotion])
 
   const errorMessage =
     error instanceof Error ? error.message : '读取作品列表失败，请稍后手动重试。'

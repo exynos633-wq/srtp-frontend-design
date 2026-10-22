@@ -2,6 +2,32 @@ import { expect, test } from '@playwright/test'
 
 test.describe.configure({ mode: 'serial' })
 
+test('目录视差随减少动态偏好实时关闭和恢复，无需刷新', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/works')
+  const cards = page.locator('[data-work-card] a')
+  await expect(cards).toHaveCount(10)
+  const offsets = () => cards.evaluateAll((items) =>
+    items.map((item) => (item as HTMLElement).style.getPropertyValue('--parallax')),
+  )
+  await expect.poll(async () => (await offsets()).some((value) => value !== '' && value !== '0px')).toBe(true)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(offsets).toEqual(Array(10).fill(''))
+  await page.evaluate(async () => {
+    window.scrollTo(0, 400)
+    window.dispatchEvent(new Event('resize'))
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  })
+  expect(await offsets()).toEqual(Array(10).fill(''))
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect.poll(async () => (await offsets()).some((value) => value !== '' && value !== '0px')).toBe(true)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(offsets).toEqual(Array(10).fill(''))
+})
+
 test('v3 目录为桌面等距四列，详情为左观看右资料', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/works')
