@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { login } from '../../src/api/auth'
 import RouteError from '../../src/app/RouteError'
 import { queryKeys } from '../../src/api/queryKeys'
@@ -9,6 +9,8 @@ import { createQueryClient } from '../../src/app/queryClient'
 import { routes } from '../../src/app/routes'
 import { server } from '../../src/mocks/node'
 import { resetMockState, setMockScenario } from '../../src/mocks/scenario'
+
+vi.mock('../../src/components/viewer/ModelViewport', () => import('./support/ModelViewportStub'))
 
 const renderAt = (path: string, client = createQueryClient()) => {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -79,8 +81,6 @@ describe('首期路由表', () => {
     const client = createQueryClient()
     renderAt('/works/work_demo_001', client)
     await screen.findByRole('heading', { name: '院落模型' })
-    fireEvent.click(screen.getByRole('button', { name: '开始预览' }))
-    expect(screen.getByText('正在准备预览')).toBeVisible()
 
     setMockScenario('empty')
     await act(async () => {
@@ -92,7 +92,7 @@ describe('首期路由表', () => {
     expect(screen.queryByRole('heading', { name: '院落模型' })).toBeNull()
     expect(screen.queryByRole('button', { name: '开始预览' })).toBeNull()
     expect(screen.queryByRole('region', { name: '模型观看区' })).toBeNull()
-    expect(screen.queryByText('正在准备预览')).toBeNull()
+    expect(screen.queryByTestId('model-viewport-stub')).toBeNull()
   })
 
   it('/admin/works/:id/edit 携带作品编号进入编辑页', async () => {

@@ -32,7 +32,7 @@ export default function PublicLayout() {
       </main>
       <footer className={classNames(styles.footer, isHome && styles.footerHidden)}>
         <MockBadge />
-        演示阶段 · 作品数据、认证、模型渲染与 AI 助手尚未接入
+        演示阶段 · 作品数据、认证与 AI 助手尚未接入；模型查看为客户端真实渲染
       </footer>
     </div>
   )

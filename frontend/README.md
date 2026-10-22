@@ -211,6 +211,20 @@ P14 实测：
 - 完整 Mock 业务流通过：草稿 → 模拟 ready 资源 → 保存同 id → 发布 → 目录/城市 → 清空城市仍目录 → 下架 → 目录/最后点位移除；新详情 404、新预览拒绝；AI 入口不存在。自动演示流会先下架杭州原占位 `模型占位 06` 以验证最后点位 4→3；默认五分钟手动脚本使用初始数据、不改这个隐藏夹具，城市点位总数保持 4（见验收记录 §3）。
 - 当前 192 条单测、89 条 Chrome E2E；真实上传、真实模型渲染、远程会话、真实认证安全、AI、并发与线上部署仍未接入。P14 不构成这些能力的验收。
 
+## 真实客户端模型查看器（本轮）
+
+公开详情与管理员预览现在共用真实客户端查看器：未开始时只显示封面；点击“开始预览”并通过公开状态检查后才动态加载 Three/Spark 代码和模型字节。GLB 使用现有 `GLTFLoader`，标准 3DGS PLY 锁定 `@sparkjsdev/spark@2.4.0`，两者共享一个原生 Three 渲染核心、一个 canvas、一个 RAF 和一套相机控制器，不改首页 Fiber 地球。管理员预览复用同一外壳。
+
+- 独立 DEV 测试页：`/dev/model-viewer`，本地选择/替换 `File` 即加载，不上传、不请求外部资源；生产构建不包含该页与开发映射。
+- 开发服务器只把种子资源编号白名单映射到仓库根目录三件真实文件，支持 Range 与真实字节进度；模型不进 `public/`、不打入构建。模拟替换绑定后新 `modelAssetId`/`version` 不再命中旧映射。
+- 生产由宿主通过 `PreviewViewer` 的 `modelSource`/`resolveModelSource` 显式提供带版本 URL；作品公开/后台读契约不新增来源字段。未提供时显示“尚未配置模型资源”，不伪造成功或回退模拟。DEV 只有 Mock 开启时才读取 seed 映射，关闭 Mock 时返回 null，不会误用同 ID 旧模型。
+- 支持 glTF 2.0 内嵌 GLB 与标准二进制小端 3DGS PLY（SH 0/9/24/45）。Draco/Meshopt/KTX2、外部 URI、未知必要扩展、普通点云、缺字段/坏数值明确拒绝。
+- 显示 Z-up；方向按真实内容识别（GLB Y-up、3DGS PLY Z-up），支持根节点 X/Y/Z 各 +90° 叠加纠正与重置，不改文件、不重解析。Orbit/Fly/Walk、按住交互期间不恢复的自动旋转、触控、Bloom、快速着色、Gaussian 单 splat 尺度、PNG 与 35 秒录制均已接入；GLB 不提供尺寸缩放，Walk 只做地面约束、不防穿墙。普通详情窄容器设置面板在画布下方，宽放大容器才放右侧。
+- 截图与录制都是合成 canvas 输出（含 Bloom），不含 DOM；35 秒录制用 `MediaRecorder` 生成真实视频，无音频。
+
+完整嵌入 API、`ModelSource`/`ModelViewConfig`/options/events、释放边界、格式限制与性能数据见
+[`src/viewer/README.md`](src/viewer/README.md)。最终实测 233 条单测、108 条 Chrome E2E（含真实 35 秒录制、PNG/Bloom 与 10 轮释放趋势）；Safari、Firefox、手机真机、弱网、真实上传、认证安全、AI 与线上部署仍未验证。P15 认证未完成，不把本轮客户端查看器写成最终产品认证。
+
 ## 样式与设计变量（P02）
 
 样式分两层：`src/styles/tokens.css` 只放设计变量，`*.module.css` 组织局部样式；页面里不写

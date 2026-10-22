@@ -102,7 +102,7 @@ test('详情未开始时只有封面，不请求完整模型或创建预览会�
   await page.goto('/works/work_demo_001')
   await expect(page.getByRole('heading', { name: '院落模型' })).toBeVisible()
   await expect(page.getByText('封面待预览')).toBeVisible()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
 
   const modelOrPreview = requests.filter(
     (url) => /\.(glb|ply)(\?|$)/.test(url) || url.includes('/api/preview'),
@@ -110,51 +110,48 @@ test('详情未开始时只有封面，不请求完整模型或创建预览会�
   expect(modelOrPreview).toEqual([])
 })
 
-test('预览状态机：准备、重复开始防护、结束与迟到结果', async ({ page }) => {
+test('预览状态机：开始后真实加载、结束卸载与重新开始不串状态', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.goto('/works/work_demo_001')
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('正在准备预览')).toBeVisible()
-  await expect(page.getByText('模拟准备 · 不伪造首帧')).toBeVisible()
-
-  // 重复点击开始不应重开计时或增加实例。按钮保留焦点并标记 aria-disabled，
-  // 因此用 dispatchEvent 触发点击，验证处理函数自身的防重。
-  await page.getByRole('button', { name: '正在准备…' }).dispatchEvent('click')
-  await page.waitForTimeout(700)
-  await expect(page.getByText('正在准备预览')).toBeVisible()
-
-  await expect(page.getByText('模拟观看画面', { exact: true })).toBeVisible({ timeout: 2500 })
-  await expect(page.getByRole('button', { name: '复位' })).toBeEnabled()
+  await expect(page.locator('[data-viewer-phase]')).toHaveCount(1, { timeout: 15_000 })
+  await expect(page.getByRole('button', { name: '开始预览' })).toHaveCount(0)
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByRole('button', { name: '复位视角' })).toBeEnabled()
   await expect(page.getByRole('button', { name: '放大查看' })).toBeEnabled()
   await expect(page.locator('section[aria-label="模型观看区"]')).toHaveCount(1)
 
-  // 准备中结束；旧计时器即使到点也不能恢复画面。
   await page.getByRole('button', { name: '结束预览' }).click()
-  await expect(page.getByText('观看实例已释放。你可以重新开始一次预览。')).toBeVisible()
-  await page.waitForTimeout(1600)
-  await expect(page.getByText('观看实例已释放。你可以重新开始一次预览。')).toBeVisible()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toHaveCount(0)
+  await expect(page.getByText(/观看实例已释放/).first()).toBeVisible()
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
+  await page.waitForTimeout(800)
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
 
-  // 再次开始仍只有一个观看区；结束与重新开始不串状态。
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toBeVisible({ timeout: 2500 })
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
   await expect(page.locator('section[aria-label="模型观看区"]')).toHaveCount(1)
 })
 
 test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预览', async ({ page }) => {
   await page.goto('/works/work_demo_001')
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toBeVisible({ timeout: 2500 })
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
 
   await page.getByRole('button', { name: '放大查看' }).click()
   const dialog = page.getByRole('dialog', { name: '放大查看：院落模型' })
   await expect(dialog).toBeVisible()
   await expect(page.getByRole('button', { name: '恢复常规查看' })).toBeFocused()
   await expect(page.locator('section[aria-label^="放大查看"]')).toHaveCount(1)
+  // 焦点循环包含 new input/select 等可聚焦控件，Shift+Tab 不能离开对话框。
+  await page.keyboard.press('Shift+Tab')
+  expect(
+    await page.evaluate(() => document.querySelector('[role="dialog"]')?.contains(document.activeElement) ?? false),
+  ).toBe(true)
 
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(page.getByRole('button', { name: '放大查看' })).toBeFocused()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toBeVisible()
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
 })
 
 test('目录到详情发生共享封面克隆，结束后不残留遮罩或克隆', async ({ page }) => {
@@ -254,7 +251,7 @@ test('详情读取失败、404 与手动重试均可用', async ({ page }) => {
   await page.getByRole('button', { name: '手动重试' }).click()
   await expect(page.getByRole('heading', { level: 1, name: '院落模型' })).toBeVisible()
   await expect(page.getByText('封面待预览')).toBeVisible()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
 
   await page.goto('/works/no-such-work')
   await expect(page.getByRole('heading', { name: '作品不存在' })).toBeVisible()
@@ -264,7 +261,7 @@ test('详情读取失败、404 与手动重试均可用', async ({ page }) => {
 test('预览开始后离开详情再进入另一作品，不串用旧会话', async ({ page }) => {
   await page.goto('/works/work_demo_001')
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('正在准备预览')).toBeVisible()
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(1, { timeout: 15_000 })
 
   await page
     .getByRole('navigation', { name: '公开展示区导航' })
@@ -275,7 +272,7 @@ test('预览开始后离开详情再进入另一作品，不串用旧会话', as
   await expect(page).toHaveURL(/\/works\/work_demo_002$/)
   await expect(page.getByRole('heading', { level: 1, name: '长城模型' })).toBeVisible()
   await expect(page.getByText('封面待预览')).toBeVisible()
-  await expect(page.getByText('模拟观看画面', { exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
   await expect.poll(() => overlayCount(page), { timeout: 2000 }).toBe(0)
 })
 
