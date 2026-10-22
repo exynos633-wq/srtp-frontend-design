@@ -529,7 +529,9 @@ export function PreviewViewer({
               </Suspense>
             ) : null}
 
-            {showPreStartPanel ? (
+          </div>
+
+          {showPreStartPanel ? (
               <div
                 className={classNames(
                   styles.statusPanel,
@@ -541,10 +543,10 @@ export function PreviewViewer({
                   <>
                     <p className={styles.statusTitle}>封面待预览</p>
                     <p className={styles.statusText}>
-                      开始后才创建本地客户端查看器并下载真实模型；当前不下载模型，也不创建远程会话。
+                      开始后加载模型。拖动旋转、缩放查看，探索建筑的形态与细节。
                     </p>
                     <div className={styles.statusAction}>
-                      <Button variant="primary" data-action="start" onClick={beginPreview}>
+                      <Button variant="primary" magnetic data-action="start" onClick={beginPreview}>
                         开始预览
                       </Button>
                     </div>
@@ -563,7 +565,7 @@ export function PreviewViewer({
                     <p className={styles.statusTitle}>预览已结束</p>
                     <p className={styles.statusText}>观看实例已释放，模型与渲染资源已清理。你可以重新开始一次预览。</p>
                     <div className={styles.statusAction}>
-                      <Button variant="primary" data-action="start" onClick={beginPreview}>
+                      <Button variant="primary" magnetic data-action="start" onClick={beginPreview}>
                         开始预览
                       </Button>
                     </div>
@@ -585,7 +587,7 @@ export function PreviewViewer({
                     <p className={styles.statusTitle}>无法确认作品可用性</p>
                     <p className={styles.statusText}>{checkError || '读取作品当前状态失败，未开始加载模型。'}</p>
                     <div className={styles.statusAction}>
-                      <Button variant="primary" data-action="start" onClick={beginPreview}>
+                      <Button variant="primary" magnetic data-action="start" onClick={beginPreview}>
                         手动重试
                       </Button>
                     </div>
@@ -593,8 +595,6 @@ export function PreviewViewer({
                 ) : null}
               </div>
             ) : null}
-          </div>
-
           <div className={styles.footer}>
             <p className={styles.hint}>{hintText}</p>
             <p className={styles.format}>

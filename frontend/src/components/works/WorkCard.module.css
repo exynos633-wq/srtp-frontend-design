@@ -1,143 +1,111 @@
-.item {
-  display: flex;
-  min-width: 0;
-}
-
+.item { display: flex; min-width: 0; }
 .card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--radius-panel);
+  perspective: 1000px;
+}
+.surface {
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-panel);
-  background: var(--color-panel);
+  border-radius: inherit;
+  background: linear-gradient(145deg, #1a252b, #111b22);
   overflow: hidden;
-  transition:
-    transform var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  transition: transform 550ms var(--ease-exhibit), border-color 250ms ease, box-shadow 400ms ease;
 }
-
-/* 固定 16:10 画面区：图片加载不推动标题（规范 §5.1）。 */
+.surface::after {
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(350px circle at var(--pointer-x, 50%) var(--pointer-y, 0%), #e4c89a, #7bd6ce 35%, transparent 70%);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  content: '';
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
 .media {
   position: relative;
   display: grid;
+  flex: 1;
   place-items: center;
   aspect-ratio: 16 / 10;
   background: var(--color-image-bed);
   overflow: hidden;
 }
-
-.image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: transform var(--dur-base) var(--ease-out);
-}
-
-.fallback {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-  text-align: center;
-}
-
-/* 中性“不可用”标记，不画建筑轮廓，不冒充封面或模型。 */
-.fallbackMark {
-  position: relative;
-  width: 32px;
-  height: 24px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-control);
-}
-
-.fallbackMark::after {
+.media::after {
   position: absolute;
-  inset: 4px;
-  border-top: 1px solid var(--color-line);
-  content: '';
-  transform: rotate(-18deg) translateY(7px);
-}
-
-.body {
-  display: grid;
-  gap: var(--space-1);
-  min-height: 76px;
-  padding: var(--space-4);
-}
-
-.title {
-  color: var(--color-text);
-  font-size: var(--text-heading);
-  line-height: var(--leading-heading);
-  font-weight: var(--weight-heading);
-  overflow-wrap: anywhere;
-}
-
-.city {
-  color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-}
-
-/* 指针悬停才抬起；触屏不保留悬停态，改用按压反馈（动效设计 §2）。 */
-@media (hover: hover) and (pointer: fine) {
-  .card:hover {
-    border-color: var(--color-border-hover);
-    background: var(--color-surface-hover);
-    box-shadow: 0 12px 32px var(--color-shadow);
-    transform: translateY(-3px);
-  }
-
-  .card:hover .image {
-    transform: scale(1.025);
-  }
-}
-
-.card:active {
-  border-color: var(--color-border-hover);
-  transform: scale(0.995);
-}
-
-/* 冷银短角标只标当前选中，不沿建筑轮廓描线（规范 §2.1、§5.1）。 */
-.media[data-selected='true']::before,
-.media[data-selected='true']::after {
-  position: absolute;
-  inset: var(--space-2);
+  inset: 0;
   content: '';
   pointer-events: none;
+  background: radial-gradient(ellipse at var(--pointer-x, 50%) var(--pointer-y, 0%), rgb(244 231 199 / 12%), transparent 55%);
+  opacity: 0;
+  transition: opacity 350ms ease;
 }
-
-.media[data-selected='true']::before {
-  background:
-    linear-gradient(var(--color-silver), var(--color-silver)) left top / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) left top / 1px 8px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right top / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right top / 1px 8px no-repeat;
+.image { width: 100%; height: 100%; object-fit: contain; transition: transform 700ms var(--ease-exhibit); }
+.ordinal {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1;
+  padding: 4px 9px;
+  border: 1px solid rgb(233 240 234 / 14%);
+  border-radius: 999px;
+  background: rgb(9 14 18 / 86%);
+  color: #c5d1d0;
+  font: 9px/1.6 var(--font-latin);
+  letter-spacing: 0.14em;
 }
-
-.media[data-selected='true']::after {
-  background:
-    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 1px 8px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 1px 8px no-repeat;
+.body { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 104px; padding: 24px; }
+.caption { display: grid; gap: 7px; min-width: 0; }
+.title { color: #eee9df; font: 400 24px/1.4 var(--font-display); overflow-wrap: anywhere; }
+.city { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
+.arrow {
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-warm);
+  font-size: 20px;
+  transition: background 250ms ease, color 250ms ease, rotate 350ms var(--ease-exhibit);
 }
+.fallback { display: grid; justify-items: center; gap: 12px; padding: 24px; color: var(--color-text-muted); font-size: 13px; text-align: center; }
+.fallbackMark { width: 32px; height: 24px; border: 1px solid var(--color-line); border-radius: 4px; }
+.media[data-selected='true'] { box-shadow: inset 0 0 0 2px var(--color-silver); }
+.card:focus-visible .surface { border-color: var(--color-focus); }
+.card:focus-visible .arrow { background: var(--color-warm); color: #111b22; }
 
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .surface { border-color: #628082; box-shadow: 0 24px 60px rgb(0 0 0 / 28%); }
+  .card:hover .surface::after,
+  .card:hover .media::after { opacity: 1; }
+  .card:hover .arrow { background: var(--color-warm); color: #111b22; rotate: 8deg; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover .surface { transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-5px); }
+  .card:hover .image { transform: scale(1.045); }
+}
+/* 即时归正后再读取封面矩形，用于已有共享封面转场。 */
+.card[data-opening='true'] .surface { transform: none; transition: none; }
+.card[data-opening='true'] .image { transform: none; transition: none; }
+
+@media (max-width: 767px) {
+  .body { min-height: 88px; padding: 20px; }
+  .title { font-size: 22px; }
+  .ordinal { top: 14px; left: 14px; }
+  .card:active .surface { border-color: var(--color-warm); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .image {
-    transition: none;
-  }
-
-  .card:hover,
-  .card:active,
-  .card:hover .image {
-    transform: none;
-  }
+  .surface, .surface::after, .media::after, .image, .arrow { transition: none; }
 }

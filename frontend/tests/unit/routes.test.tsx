@@ -32,7 +32,7 @@ afterAll(() => server.close())
 describe('首期路由表', () => {
   it('首页渲染空间入口标题', async () => {
     renderAt('/')
-    expect(await screen.findByRole('heading', { name: '从城市进入建筑模型' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: /从一座城，.*走进.*一座建筑/  })).toBeVisible()
     // jsdom 没有 WebGL：必须保留说明和完整目录入口，而不是伪装成可交互地球。
     expect(screen.getByText('三维场景不可用')).toBeVisible()
     expect(screen.getByRole('link', { name: '前往全部作品' })).toHaveAttribute('href', '/works')

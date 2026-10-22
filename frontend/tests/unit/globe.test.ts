@@ -114,10 +114,10 @@ describe('透视相机可见性与命中', () => {
 })
 
 describe('地球直径与相机', () => {
-  it('桌面、手机和中间宽度使用规范构图', () => {
+  it('桌面保留地球尺度，手机为标题预留空间', () => {
     expect(globeDiameterForViewport(1440, 900)).toBe(760)
-    expect(globeDiameterForViewport(390, 844)).toBeCloseTo(405)
-    expect(globeDiameterForViewport(320, 800)).toBeCloseTo((320 * 405) / 390)
+    expect(globeDiameterForViewport(390, 844)).toBeCloseTo(390 * 0.94)
+    expect(globeDiameterForViewport(320, 800)).toBeCloseTo(320 * 0.94)
   })
 
   it('相机距离让球体连同边缘光的外径接近目标像素', () => {
@@ -130,15 +130,15 @@ describe('地球直径与相机', () => {
     expect(projected).toBeCloseTo(diameter, 0)
   })
 
-  it('桌面球心偏左，手机球心略偏上', () => {
+  it('桌面球心偏右，手机球心偏下，避开可见标题', () => {
     const desktop = globeViewOffset(1440, 900)
-    expect(desktop.horizontal).toBe(0.45)
-    expect(desktop.x).toBeCloseTo(72)
-    expect(desktop.y).toBeCloseTo(0)
+    expect(desktop.horizontal).toBe(0.69)
+    expect(desktop.x).toBeCloseTo(-273.6)
+    expect(desktop.y).toBeCloseTo(-36)
 
     const mobile = globeViewOffset(390, 844)
-    expect(mobile.vertical).toBe(0.45)
-    expect(mobile.y).toBeCloseTo(42.2)
+    expect(mobile.vertical).toBe(0.64)
+    expect(mobile.y).toBeCloseTo(-118.16)
   })
 })
 

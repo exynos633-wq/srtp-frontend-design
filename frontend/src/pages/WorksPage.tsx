@@ -5,7 +5,7 @@ import gsap from 'gsap'
 import { listPublicWorks } from '../api/works'
 import { queryKeys } from '../api/queryKeys'
 import { Button } from '../components/ui/Button'
-import { PageHeader } from '../components/ui/PageHeader'
+import { ExhibitionLight } from '../components/ui/ExhibitionLight'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { WorkCard, type WorkCardOpenSource } from '../components/works/WorkCard'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
@@ -146,11 +146,19 @@ export default function WorksPage() {
 
   return (
     <div className={styles.page} ref={pageRef}>
-      <PageHeader
-        eyebrow="公开目录"
-        title="全部作品"
-        description="按发布时间排序，一次展示全部已发布作品。城市选填，未设置城市不影响查看。"
-      />
+      <header className={styles.hero}>
+        <ExhibitionLight />
+        <div className={styles.heroCopy}>
+          <p className={styles.eyebrow}>THE ARCHITECTURAL COLLECTION</p>
+          <h1 className={styles.title}>全部作品<span aria-hidden="true">。</span></h1>
+          <p className={styles.description}>在形态与空间之间，发现建筑的另一面。</p>
+        </div>
+        <p className={styles.collectionNote}>建筑模型档案<br /><span>以三维，重新观看</span></p>
+      </header>
+      <div className={styles.directoryBar}>
+        <span>公开目录</span>
+        <span>{isPending ? '读取作品中' : `${works.length} 件作品`}<span className={styles.divider}>/</span>按发布时间排序</span>
+      </div>
 
       {isPending ? (
         <div className={styles.state} aria-busy="true">
@@ -191,7 +199,7 @@ export default function WorksPage() {
 
       {works.length > 0 ? (
         <ul className={styles.grid} aria-label="已发布作品">
-          {works.map((work) => (
+          {works.map((work, index) => (
             <WorkCard
               key={work.id}
               workId={work.id}
@@ -200,6 +208,7 @@ export default function WorksPage() {
               cityName={work.city?.name ?? null}
               coverUrl={work.coverUrl}
               onOpen={handleOpen}
+              ordinal={index + 1}
             />
           ))}
         </ul>

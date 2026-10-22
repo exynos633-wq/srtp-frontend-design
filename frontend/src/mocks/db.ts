@@ -78,6 +78,11 @@ interface SeedInput {
 }
 
 const PLACEHOLDER_COVER = '/mock/placeholder-cover.svg'
+// 从仓库内对应真实 GLB 的查看器画面导出，仅替换这两件种子作品的展示封面。
+const DEMO_COVERS: Record<string, string> = {
+  work_demo_001: '/mock/courtyard-cover.png',
+  work_demo_002: '/mock/great-wall-cover.png',
+}
 
 function toCityRef(cityId: string | null): CityRef | null {
   if (cityId === null) return null
@@ -96,7 +101,7 @@ function createWork(input: SeedInput): MockWork {
     name: input.name,
     cityId: input.cityId,
     city: toCityRef(input.cityId),
-    coverUrl: complete ? PLACEHOLDER_COVER : null,
+    coverUrl: complete ? (DEMO_COVERS[input.id] ?? PLACEHOLDER_COVER) : null,
     modelFormat: complete ? input.modelFormat : null,
     description: input.description,
     modelingNote: input.modelingNote ?? null,

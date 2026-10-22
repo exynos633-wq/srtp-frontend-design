@@ -110,7 +110,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
   const [bubbleMode, setBubbleMode] = useState<CityBubbleMode>('hover')
   const [bubbleClosing, setBubbleClosing] = useState(false)
   const [bubbleSize, setBubbleSize] = useState({ width: 0, height: 0 })
-  const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0, viewportHeight: 0 })
   const [pendingCityName, setPendingCityName] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const bubbleCity = cities.find((city) => city.id === bubbleCityId) ?? null
@@ -577,12 +577,15 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
     const stage = stageRef.current
     if (!stage) return
     const update = () =>
-      setStageSize({ width: stage.clientWidth, height: stage.clientHeight })
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight, viewportHeight: window.innerHeight })
     update()
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(update)
-    observer.observe(stage)
-    return () => observer.disconnect()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(stage)
+    window.addEventListener('resize', update)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [])
 
   useEffect(() => {
@@ -802,7 +805,9 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
     typeof window === 'undefined' ? 800 : Math.max(480, window.innerHeight)
   const bubbleMaxHeight = Math.max(
     180,
-    (stageSize.height || fallbackHeight) - (mobile ? 112 : 120),
+    // 短屏首页允许纵向滚动，气泡仍按可见视口预算保留内部滚动。
+    Math.min(stageSize.height || fallbackHeight,
+      (stageSize.viewportHeight || fallbackHeight) - (mobile ? 100 : 0)) - (mobile ? 112 : 120),
   )
   const viewportArea =
     typeof window === 'undefined' ? 0 : window.innerWidth * window.innerHeight
