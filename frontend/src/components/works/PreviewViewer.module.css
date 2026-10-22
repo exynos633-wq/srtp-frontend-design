@@ -112,7 +112,7 @@
   transform: rotate(-18deg) translateY(7px);
 }
 
-/* 可交互状态：模拟画面，明确标注，不冒充真实模型首帧。 */
+/* 查看器覆盖在封面之上；load/ready 后由真实 canvas 显示。 */
 .cover[data-status='interactive'] .coverImage {
   opacity: 0;
 }
@@ -323,8 +323,8 @@
   }
 
   .controls {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     width: 100%;
     margin-left: 0;
   }
@@ -333,5 +333,52 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse {
     animation: none;
+  }
+}
+
+/* 查看器模块按需加载时的诚实占位；不冒充首帧。 */
+.viewerFallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(8 13 18 / 88%);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: center;
+}
+
+.format {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+}
+
+@media (max-width: 767px) {
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+
+/* 手机窄屏开始预览后观看容器增高，保证 canvas 不是一条；
+   参数面板仍在 canvas 下方，不覆盖主要画面。 */
+@media (max-width: 767px) {
+  .cover[data-status='loading'],
+  .cover[data-status='interactive'],
+  .cover[data-status='viewer-error'] {
+    aspect-ratio: auto;
+    height: min(58vh, 440px);
+  }
+
+  .cover:has([data-viewer-settings-open='true']) {
+    height: min(74vh, 620px);
   }
 }

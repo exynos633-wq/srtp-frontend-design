@@ -15,6 +15,7 @@ const AdminWorksPage = lazy(() => import('../pages/admin/AdminWorksPage'))
 const WorkNewPage = lazy(() => import('../pages/admin/WorkNewPage'))
 const WorkEditPage = lazy(() => import('../pages/admin/WorkEditPage'))
 const WorkPreviewPage = lazy(() => import('../pages/admin/WorkPreviewPage'))
+const DevModelViewerPage = import.meta.env.DEV ? lazy(() => import('../pages/DevModelViewerPage')) : null
 
 /**
  * 首期路由表（工程设计/01）。
@@ -48,5 +49,6 @@ export const routes: RouteObject[] = [
       { path: '*', Component: NotFoundPage },
     ],
   },
+  ...(DevModelViewerPage ? [{ path: 'dev/model-viewer', Component: DevModelViewerPage }] : []),
   { path: '*', Component: NotFoundPage },
 ]

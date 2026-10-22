@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusMessage } from '../../components/ui/StatusMessage'
 import { PreviewViewer } from '../../components/works/PreviewViewer'
+import { resolveWorkModelSource } from '../../viewer/workModelSource'
 import {
   modelFormatLabel,
   workDisplayName,
@@ -83,7 +84,7 @@ export default function WorkPreviewPage() {
       />
 
       <StatusMessage tone="info">
-        当前为模拟预览，真实模型观看尚未接入。点击“开始预览”后展示模拟效果。
+        管理预览复用公开观看外壳，点击“开始预览”后才加载真实模型。资料修改不会改变作品发布状态。
       </StatusMessage>
 
       {awaitingConfirmation ? (
@@ -148,7 +149,9 @@ export default function WorkPreviewPage() {
                 id: work.id,
                 name: workDisplayName(work.name),
                 coverUrl: work.coverUrl ?? '',
+                modelFormat: work.modelFormat,
               }}
+              resolveModelSource={resolveWorkModelSource}
             />
           </div>
 

@@ -121,7 +121,8 @@ test('管理员授权预览草稿走管理接口，不调用公开详情也不�
   expect(requests.some((url) => /\.(glb|ply)(\?|$)/.test(url))).toBe(false)
 
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('正在准备预览')).toBeVisible()
+  await expect(page.locator('[data-viewer-phase="error"]')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('尚未配置模型资源')).toBeVisible()
   expect(requests.some((url) => /\.(glb|ply)(\?|$)/.test(url))).toBe(false)
 })
 

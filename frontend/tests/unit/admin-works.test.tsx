@@ -17,6 +17,8 @@ import { routes } from '../../src/app/routes'
 import { server } from '../../src/mocks/node'
 import { resetMockState, setMockScenario } from '../../src/mocks/scenario'
 
+vi.mock('../../src/components/viewer/ModelViewport', () => import('./support/ModelViewportStub'))
+
 beforeAll(() => server.listen({ onUnhandledFrame: 'bypass' }))
 afterEach(() => {
   server.resetHandlers()
@@ -248,7 +250,7 @@ describe('P10 授权预览', () => {
 
     expect(await screen.findByRole('heading', { name: '管理员预览' })).toBeVisible()
     expect(await screen.findByRole('heading', { name: '未命名草稿' })).toBeVisible()
-    expect(screen.getByText('封面待预览')).toBeVisible()
+    expect(screen.getByText('封面待预览')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始预览' })).toBeEnabled()
 
     const beforeStart = requestedUrls(fetchSpy.mock.calls)
@@ -257,7 +259,7 @@ describe('P10 授权预览', () => {
     expect(beforeStart.some((url) => /\.(glb|ply)(\?|$)/.test(url))).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: '开始预览' }))
-    expect(screen.getByText('正在准备预览')).toBeVisible()
+    expect(await screen.findByTestId('model-viewport-stub')).toBeVisible()
     expect(requestedUrls(fetchSpy.mock.calls).some((url) => /\.(glb|ply)(\?|$)/.test(url))).toBe(false)
   })
 

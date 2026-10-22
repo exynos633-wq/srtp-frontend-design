@@ -178,10 +178,11 @@ test('下架作品 409 资源占用保持 offline/旧绑定/字段，重试后�
 })
 
 test('已开始观看保留，但下架后新的开始申请按公开状态被拒', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.goto('/works/work_demo_001')
   await expect(page.getByRole('heading', { name: '院落模型' })).toBeVisible()
   await page.getByRole('button', { name: '开始预览' }).click()
-  await expect(page.getByText('模拟观看画面')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
 
   // 同页直接调用既有管理边界，保留当前 MSW 数据与已开始的观看实例。
   await page.evaluate(async () => {
@@ -200,12 +201,12 @@ test('已开始观看保留，但下架后新的开始申请按公开状态被�
   })
 
   // 已开始的观看实例不因下架或缓存失效被强行结束。
-  await expect(page.getByText('模拟观看画面')).toBeVisible()
+  await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
   await page.getByRole('button', { name: '结束预览' }).click()
   await page.getByRole('button', { name: '开始预览' }).click()
   await expect(page.getByText('作品当前不可预览')).toBeVisible({ timeout: 5000 })
   await expect(page.getByText(/该作品已不再公开/)).toBeVisible()
-  await expect(page.getByText('模拟观看画面')).toHaveCount(0)
+  await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
 })
 
 test('服务端发布边界：缺必填422、无效城市、错误kind与重复发布幂等', async ({ page }) => {

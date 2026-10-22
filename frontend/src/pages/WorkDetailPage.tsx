@@ -9,6 +9,7 @@ import { isApiError } from '../api/http'
 import { Button } from '../components/ui/Button'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { PreviewViewer } from '../components/works/PreviewViewer'
+import { resolveWorkModelSource } from '../viewer/workModelSource'
 import { classNames } from '../lib/classNames'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
 import type { PublicWork } from '../types/work'
@@ -152,7 +153,7 @@ function WorkDetailContent({ id }: { id?: string }) {
 
       {started && isApiError(error) && error.status === 404 ? (
         <StatusMessage tone="warning">
-          该作品已不再公开。当前已开始的模拟观看会保留；结束后不能重新开始。
+          该作品已不再公开。当前已开始的真实观看会保留；结束后不能重新开始。
         </StatusMessage>
       ) : null}
 
@@ -165,6 +166,7 @@ function WorkDetailContent({ id }: { id?: string }) {
               onEntered={handleEntered}
               onPreviewStarted={handlePreviewStarted}
               ensureAvailable={ensurePreviewAvailable}
+              resolveModelSource={resolveWorkModelSource}
             />
           </div>
 
