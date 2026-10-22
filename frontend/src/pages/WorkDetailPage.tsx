@@ -190,6 +190,22 @@ function WorkDetailContent({ id }: { id?: string }) {
               </section>
             ) : null}
 
+            <section className={styles.section} data-detail-layer>
+              <h2 className={styles.sectionTitle}>作品信息</h2>
+              <dl className={styles.metaList}>
+                <div className={styles.metaRow}>
+                  <dt className={styles.metaLabel}>模型格式</dt>
+                  <dd className={styles.metaValue}>
+                    {displayedWork.modelFormat === 'gaussian-ply' ? '3DGS 高斯 PLY' : 'glTF 2.0 GLB'}
+                  </dd>
+                </div>
+                <div className={styles.metaRow}>
+                  <dt className={styles.metaLabel}>观看方式</dt>
+                  <dd className={styles.metaValue}>点击开始后客户端实时渲染</dd>
+                </div>
+              </dl>
+            </section>
+
             <section className={classNames(styles.section, styles.commentSection)} data-detail-layer>
               <h2 className={styles.sectionTitle}>评论 · 预留</h2>
               <p className={styles.placeholderText}>

@@ -2,16 +2,15 @@
   position: sticky;
   top: 0;
   z-index: var(--z-nav);
-  padding: 18px max(var(--page-padding), 3vw);
-  background: rgb(9 14 18 / 86%);
-  backdrop-filter: blur(20px);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .overlay {
   position: absolute;
   inset: 0 0 auto;
-  background: linear-gradient(rgb(9 14 18 / 85%), transparent);
-  backdrop-filter: none;
+  background: linear-gradient(rgb(9 10 11 / 94%), rgb(9 10 11 / 0%));
+  border-bottom-color: transparent;
 }
 
 .bar {
@@ -20,21 +19,10 @@
   justify-content: space-between;
   gap: 24px;
   width: 100%;
-  max-width: 1440px;
+  max-width: var(--content-max);
   min-height: 64px;
   margin: auto;
-  padding: 0 24px;
-  border: 1px solid rgb(203 222 218 / 13%);
-  border-radius: 18px;
-  background: linear-gradient(125deg, rgb(233 245 239 / 5%), rgb(233 245 239 / 1%));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
-  transition: max-width 500ms var(--ease-exhibit), border-radius 500ms var(--ease-exhibit), background 300ms ease;
-}
-
-.header[data-compact='true'] .bar {
-  max-width: 980px;
-  border-radius: 999px;
-  background: rgb(19 29 35 / 90%);
+  padding: 0 var(--page-padding);
 }
 
 .brand {
@@ -49,57 +37,82 @@
   letter-spacing: 0.08em;
 }
 
-.brandMark { color: var(--color-warm); font: 40px/1 var(--font-display); }
+.brandMark { color: var(--color-accent-line); font: 38px/1 var(--font-display); }
 .brandCaption { display: block; color: var(--color-text-muted); font: 8px/1.8 var(--font-latin); letter-spacing: 0.18em; }
+
 .nav { min-width: 0; }
-.list { display: flex; gap: 8px; }
+.list { position: relative; display: flex; gap: 4px; }
 .link {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 0 22px;
-  border-radius: 999px;
+  padding: 0 18px;
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
-  transition: color 200ms ease, background 200ms ease;
+  transition: color 200ms ease;
 }
-.link:hover { background: rgb(237 244 241 / 5%); color: var(--color-text); }
-.active { color: #eee6d7; background: rgb(221 188 139 / 10%); }
-.underline { display: none; }
+.link:hover { color: var(--color-text); }
+.active { color: var(--color-text); }
+
+.indicator {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  height: 1px;
+  background: var(--color-accent-line);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 360ms var(--ease-exhibit),
+    width 360ms var(--ease-exhibit),
+    opacity 200ms ease;
+  will-change: transform, width;
+}
+.indicator[data-visible='true'] { opacity: 1; }
+
+.progress {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: var(--color-accent-line);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+.progress[data-visible='true'] { opacity: 0.9; }
 
 @media (max-width: 767px) {
-  .header { position: relative; padding: 0 16px; background: var(--color-bg); backdrop-filter: none; }
+  .header { position: relative; padding: 0 16px; border-bottom: 0; }
   .overlay { position: relative; }
-  .bar,
-  .header[data-compact='true'] .bar {
+  .bar {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: var(--mobile-brand-height) var(--mobile-nav-row);
+    justify-content: stretch;
     gap: 0;
     padding: 0;
-    border: 0;
     border-bottom: 1px solid var(--color-line);
-    border-radius: 0;
     background: none;
-    box-shadow: none;
   }
   .brand { justify-content: center; font-size: 14px; gap: 8px; }
-  .brandMark { font-size: 30px; }
+  .brandMark { font-size: 28px; }
   .brandCaption { font-size: 7px; }
-  .list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .nav { width: 100%; }
+  .list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
   .link { min-height: 36px; padding: 0 8px; font-size: 12px; }
+  .indicator { bottom: 2px; }
+  .progress { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bar,
-  .link { transition: none; }
-}
-
-@media (max-width: 767px) {
-  .bar, .header[data-compact='true'] .bar { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
-}
-@media (prefers-reduced-transparency: reduce) {
-  .header { background: var(--color-bg); backdrop-filter: none; }
+  .link,
+  .indicator { transition: none; }
 }

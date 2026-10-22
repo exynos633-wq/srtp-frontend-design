@@ -3,6 +3,7 @@ import type { CityRef } from './city'
 /** 模型资源类型：GLB 与高斯泼溅 PLY 分开命名，避免与普通点云混淆。 */
 export type ModelFormat = 'glb' | 'gaussian-ply'
 
+
 export type WorkStatus = 'draft' | 'published' | 'offline'
 
 /**

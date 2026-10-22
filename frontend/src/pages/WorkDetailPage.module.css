@@ -1,8 +1,9 @@
 .page {
+  position: relative;
   width: 100%;
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: var(--space-4) var(--page-padding) var(--space-10);
+  padding: var(--space-1) var(--page-padding) var(--space-10);
 }
 
 .back {
@@ -15,75 +16,39 @@
   line-height: var(--leading-label);
   font-weight: var(--weight-label);
 }
+.back:hover { color: var(--color-text); }
+.backArrow { color: var(--color-accent-text); font-size: var(--text-heading); line-height: 1; }
 
-.back:hover {
-  color: var(--color-text);
-}
-
-.backArrow {
-  font-size: var(--text-heading);
-  line-height: 1;
-}
-
-.stateBlock {
-  display: grid;
-  gap: var(--space-4);
-  max-width: 720px;
-  margin-top: var(--space-6);
-}
-
+.stateBlock { display: grid; gap: var(--space-4); max-width: 720px; margin-top: var(--space-6); }
 .stateTitle {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--text-title);
-  line-height: var(--leading-title);
-  font-weight: var(--weight-title);
+  font: 300 var(--text-title)/1.2 var(--font-display);
   overflow-wrap: anywhere;
 }
+.stateTitle:focus { outline: none; box-shadow: none; }
+.stateAction { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
-.stateAction {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.layout {
-  display: grid;
-  gap: 36px;
-  margin-top: 32px;
-}
-
-.viewerColumn {
-  min-width: 0;
-}
-
-/* 介绍采用展册排版，独立于观看区材质。 */
-.info {
-  display: grid;
-  gap: 36px;
-  align-content: start;
-  min-width: 0;
-  padding: 12px 0 40px;
-}
+/* v3 图片 A 版式：桌面左观看、右资料；手机标题→观看→资料。 */
+.layout { display: grid; gap: 28px; margin-top: 22px; }
+.viewerColumn { min-width: 0; }
 
 .infoHeader {
   display: grid;
-  gap: 20px;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+  padding-top: 6px;
 }
-
+.eyebrow { color: var(--color-accent-text); font: 10px/1.7 var(--font-latin); letter-spacing: 0.18em; }
 .title {
   margin: 0;
-  color: var(--color-text);
-  font: 400 clamp(36px, 5vw, 64px)/1.25 var(--font-display);
+  color: var(--color-paper);
+  font: 300 clamp(34px, 4vw, 54px)/1.12 var(--font-display);
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
-
-.title:focus {
-  outline: none;
-  box-shadow: none;
-}
-
+.title:focus { outline: none; box-shadow: none; }
 .city {
   display: flex;
   align-items: center;
@@ -93,78 +58,65 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+.cityDot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-accent-line); }
 
-.eyebrow { color: var(--color-warm); font: 10px/1.7 var(--font-latin); letter-spacing: 0.18em; }
-.cityDot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-warm); }
-
-/* 点赞预留只是状态占位，不是可提交控件，也不显示数量。 */
-.likePlaceholder {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  justify-self: start;
-  min-height: 32px;
-  margin: 0;
-  padding: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-}
-
-.section {
-  display: grid;
-  gap: 20px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-line);
-}
-
-.sectionTitle {
-  margin: 0;
-  color: var(--color-text);
-  font: 400 24px/1.5 var(--font-display);
-}
+.info { display: grid; gap: 28px; align-content: start; min-width: 0; padding: 4px 0 32px; }
+.section { display: grid; gap: 14px; padding-top: 20px; border-top: 1px solid var(--color-line); }
+.sectionTitle { margin: 0; color: var(--color-text); font: 400 22px/1.4 var(--font-display); }
+.sectionCopy { display: grid; gap: 10px; }
 
 /* 纯文字介绍保留换行，不渲染 HTML／Markdown。 */
 .paragraph {
-  max-width: 52ch;
+  max-width: 48ch;
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--text-body);
-  line-height: 2;
+  font-size: 16px;
+  line-height: 1.8;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.placeholderText {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
+.metaList { display: grid; gap: 0; margin: 0; }
+.metaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+  line-height: 1.7;
 }
+.metaRow:first-child { border-top: 0; }
+.metaLabel { color: var(--color-text-muted); }
+.metaValue { color: var(--color-text); text-align: right; }
 
-.commentSection {
-  min-height: 112px;
-}
-
-@media (max-width: 767px) {
-  .page {
-    padding-top: var(--space-2);
-  }
-
-  .stateTitle {
-    font-size: var(--text-title);
-    line-height: var(--leading-title);
-  }
-
-  .info {
-    padding: 0 0 24px;
-  }
-  .layout { gap: 24px; margin-top: 24px; }
-}
+/* 评论／点赞只是后续能力说明，不作为详情主内容。 */
+.commentSection { gap: 8px; padding-top: 16px; }
+.commentSection .sectionTitle { color: var(--color-text-muted); font: 400 13px/1.5 var(--font-sans); }
+.placeholderText { margin: 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.7; }
+.likePlaceholder { margin: 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.7; }
 
 @media (min-width: 1024px) {
   .layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: clamp(28px, 3vw, 40px);
+    align-items: start;
   }
-  .info { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 64px; }
+  .infoHeader { grid-column: 2; grid-row: 1; }
+  .viewerColumn { grid-column: 1; grid-row: 1 / span 2; }
+  .info { grid-column: 2; grid-row: 2; }
+  .title { font-size: clamp(36px, 3.7vw, 52px); }
+}
+
+@media (min-width: 1280px) {
+  .layout { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+}
+
+@media (max-width: 767px) {
+  .page { padding-top: var(--space-1); }
+  .layout { gap: 22px; margin-top: 18px; }
+  .info { gap: 22px; padding-bottom: 16px; }
+  .title { font-size: clamp(32px, 9vw, 44px); }
+  .stateTitle { font-size: var(--text-title); line-height: var(--leading-title); }
 }

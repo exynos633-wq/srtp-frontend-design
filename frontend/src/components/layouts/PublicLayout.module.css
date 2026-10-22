@@ -1,18 +1,14 @@
 .shell {
-  --color-bg: #090e12;
-  --color-panel: #131d23;
-  --color-line: #29373e;
-  --color-image-bed: #080d12;
-  --radius-panel: 16px;
-  --radius-control: 8px;
-  --content-max: 1440px;
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: radial-gradient(ellipse at 85% 0, rgb(70 113 114 / 9%), transparent 45%), var(--color-bg);
+  background:
+    linear-gradient(180deg, #0b0c0d 0%, var(--color-bg) 38%, #08090a 100%);
 }
 
 .main {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
@@ -33,7 +29,8 @@
 }
 
 .footer {
-  padding: var(--space-6) max(var(--page-padding), 5vw);
+  position: relative;
+  padding: var(--space-6) var(--page-inset);
   border-top: 1px solid var(--color-line);
   color: var(--color-text-muted);
   font-size: var(--text-meta);

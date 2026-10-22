@@ -1,6 +1,6 @@
 /**
- * 深色基础变量；公开端 v2 的表面覆盖位于 PublicLayout.module.css。
- * 设计依据：UI设计/视觉规范v1.0（深色）.md、UI设计/视觉升级v2实施记录.md。
+ * 深色基础变量；公开端 v3 色板与表面覆盖位于 PublicLayout.module.css。
+ * 设计依据：UI设计/视觉方向v3（墨·纸·朱砂）.md；v1/v2 文件保留为历史依据。
  *
  * 约定：
  * - 颜色、字号、间距、圆角、层级与动效时长只在此处定义，页面和组件通过 var() 引用。
@@ -9,47 +9,52 @@
  */
 
 :root {
-  /* 展示端 v2：展示标题与工具界面文字使用不同尺度。 */
-  --font-display: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+  /* 展示端 v3：墨黑、纸白、朱砂；展示标题与工具文字使用不同尺度。 */
+  --font-display: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
   --ease-exhibit: cubic-bezier(0.16, 1, 0.3, 1);
-  --color-warm: #ddbc8b;
-  --text-display: clamp(48px, 5.5vw, 84px);
-  /* —— 色彩（规范 §2.1） —— */
-  --color-bg: #080d12;
-  --color-panel: #121d26;
-  --color-surface: #192833;
-  --color-surface-hover: #1b3039;
-  --color-border-hover: #77a6a7;
-  --color-selected: #163334;
-  --color-line: #2a3e4b;
-  --color-image-bed: #20272b;
-  --color-accent: #54c8c1;
-  --color-accent-hover: #76d9d3;
-  --color-accent-active: #3aaba5;
-  --color-silver: #c6e2e6;
-  --color-text: #ebf2f5;
-  --color-text-secondary: #a8bac4;
-  --color-text-muted: #879ca8;
-  --color-input-bg: #0d161e;
-  --color-input-border: #627d8b;
-  --color-glass-border: #77a6a7;
-  --color-focus: #8fe1db;
-  --color-focus-gap: #080d12;
-  --color-disabled-bg: #172129;
-  --color-disabled-text: #879ca8;
-  --color-disabled-border: #2a3e4b;
+  --text-display: clamp(52px, 6.2vw, 96px);
+  /* —— 色彩（v3 墨·纸·朱砂） —— */
+  --color-bg: #090a0b;
+  --color-panel: #131415;
+  --color-surface: #18191a;
+  --color-surface-hover: #202122;
+  --color-border-hover: #625d54;
+  --color-selected: #2a1714;
+  --color-line: #2b2a27;
+  --color-line-strong: #625d54;
+  --color-image-bed: #0e0f10;
+  --color-paper: #ede8df;
+  --color-paper-dim: #cfc9be;
+  --color-accent: #c8472d;
+  --color-accent-text: #e0604a;
+  --color-accent-line: #c8472d;
+  --color-accent-hover: #e5745e;
+  --color-accent-active: #a63522;
+  --color-accent-strong: #a63522;
+  --color-silver: #cfc9be;
+  --color-text: #ede8df;
+  --color-text-secondary: #a8a39a;
+  --color-text-muted: #8a847b;
+  --color-input-bg: #0c0d0e;
+  --color-input-border: #625d54;
+  --color-glass-border: #2b2a27;
+  --color-focus: #ede8df;
+  --color-focus-gap: #090a0b;
+  --color-disabled-bg: #131415;
+  --color-disabled-text: #8a847b;
+  --color-disabled-border: #2b2a27;
   --color-error-text: #f08c82;
-  --color-error-bg: #2a1b20;
-  --color-warning-text: #e7b56b;
-  --color-warning-bg: #2b2419;
-  --color-success-text: #92c8ae;
-  --color-success-bg: #172821;
-  --color-shadow: rgb(0 0 0 / 40%);
+  --color-error-bg: #2a1817;
+  --color-warning-text: #d9a15e;
+  --color-warning-bg: #2a2117;
+  --color-success-text: #9cb8a6;
+  --color-success-bg: #16201b;
+  --color-shadow: rgb(0 0 0 / 45%);
 
-  /* 玻璃（规范 §2.2）：仅首页导航与场景气泡可用；手机导航与工作界面为实色。 */
-  --glass-nav: rgb(8 13 18 / 92%);
-  --glass-panel: rgb(18 29 38 / 88%);
-  --glass-blur: 12px;
+  /* 表面：v3 不用彩色玻璃；导航/气泡以实色墨黑加发丝线。 */
+  --glass-nav: rgb(9 10 11 / 94%);
+  --glass-panel: rgb(19 20 21 / 94%);
+  --glass-blur: 0px;
 
   /* —— 字体（规范 §3、§10：正式字体待制作入库） —— */
   --font-sans: "Source Han Sans SC", "Noto Sans SC", "PingFang SC",
@@ -91,16 +96,21 @@
   --mobile-brand-height: 56px;
   --mobile-nav-row: 44px;
   --page-padding: 32px;
-  --content-max: 1280px;
+  --content-max: 1560px;
+  /* 内容列左右对齐线：窄屏为页面侧边距，宽屏跟随 1560 内容列。 */
+  --page-inset: max(
+    var(--page-padding),
+    calc((100% - var(--content-max)) / 2 + var(--page-padding))
+  );
   --panel-padding: 24px;
   --control-height: 48px;
   --button-height: 44px;
   --grid-gap: 24px;
 
   /* —— 圆角（规范 §4.1） —— */
-  --radius-overlay: 12px;
-  --radius-panel: 8px;
-  --radius-control: 6px;
+  --radius-overlay: 8px;
+  --radius-panel: 4px;
+  --radius-control: 2px;
 
   /* —— 层级 —— */
   --z-nav: 100;

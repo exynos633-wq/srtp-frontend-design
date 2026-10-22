@@ -76,6 +76,7 @@ export function WorkCard({
           resetPointer()
           delete event.currentTarget.dataset.opening
         }}
+        data-cursor-label="查看"
       >
         <span className={styles.surface}>
           <span
@@ -84,7 +85,6 @@ export function WorkCard({
             data-cover-ready={coverLoaded ? 'true' : undefined}
             ref={mediaRef}
           >
-            {ordinal != null && <span className={styles.ordinal} aria-hidden="true">{String(ordinal).padStart(2, '0')} / COLLECTION</span>}
             {hasCover ? (
               <img
                 className={styles.image}
@@ -105,7 +105,10 @@ export function WorkCard({
           </span>
           <span className={styles.body}>
             <span className={styles.caption}>
-              <h3 className={styles.title}>{title}</h3>
+              <span className={styles.titleRow}>
+                {ordinal != null && <span className={styles.ordinal} aria-hidden="true">{String(ordinal).padStart(2, '0')}</span>}
+                <h3 className={styles.title}>{title}</h3>
+              </span>
               <span className={styles.city}>{cityName ?? '未设置城市'}</span>
             </span>
             <span className={styles.arrow} aria-hidden="true">↗</span>

@@ -6,7 +6,7 @@
 
 .badge {
   margin: 0 0 8px;
-  color: #f08c82;
+  color: var(--color-error-text);
   font-size: 14px;
 }
 
@@ -19,7 +19,7 @@
 
 .detail {
   margin: 0 0 20px;
-  color: #a8bac4;
+  color: var(--color-text-secondary);
 }
 
 .actions {

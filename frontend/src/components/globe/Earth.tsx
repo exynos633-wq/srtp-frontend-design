@@ -11,15 +11,16 @@ import {
   Vector3,
   type DirectionalLight,
 } from 'three'
-import earthTextureUrl from '../../assets/earth-demo.png'
+import earthTextureUrl from '../../assets/earth-v3.png'
 import { ATMOSPHERE_SCALE, latLonToVector3 } from '../../lib/globeMath'
 
-const ATMO = '#54C8C1'
-const GRID = '#395962'
+const ATMO = '#EDE8DF'
+const GRID = '#6B665C'
 
 /**
- * 演示地球：低对比陆地纹理 + 局部经纬弧 + 冷青边缘光。
+ * 演示地球：墨黑底、石墨陆地、纸白边缘光。
  * 纹理来自公共领域 Natural Earth 数据的重绘，见 src/assets/README.md。
+ * v3 只替换色板，不改变相机、点位或交互数学。
  */
 export function Earth() {
   const source = useLoader(TextureLoader, earthTextureUrl)
@@ -35,7 +36,7 @@ export function Earth() {
 
   return (
     <group>
-      <ambientLight intensity={0.42} />
+      <ambientLight intensity={0.5} />
       <FollowLight />
       <mesh>
         <sphereGeometry args={[1, 96, 64]} />
@@ -59,7 +60,7 @@ function FollowLight() {
     light.current.position.x -= 2
   })
 
-  return <directionalLight ref={light} intensity={2.8} color="#f2e7d3" />
+  return <directionalLight ref={light} intensity={2.4} color="#ffffff" />
 }
 
 function Atmosphere() {
@@ -80,7 +81,7 @@ function Atmosphere() {
         varying vec3 vViewNormal;
         void main() {
           float rim = pow(1.0 - abs(vViewNormal.z), 3.0);
-          gl_FragColor = vec4(uColor, rim * 0.26);
+          gl_FragColor = vec4(uColor, rim * 0.18);
         }
       `,
       transparent: true,

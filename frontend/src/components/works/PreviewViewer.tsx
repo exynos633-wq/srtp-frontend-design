@@ -487,7 +487,7 @@ export function PreviewViewer({
             </div>
           ) : null}
 
-          <div className={styles.cover} data-status={status} ref={coverRef}>
+          <div className={styles.cover} data-status={status} data-cursor-label={activeViewer ? undefined : '开始预览'} ref={coverRef}>
             {coverState !== 'error' ? (
               <img
                 ref={imageRef}

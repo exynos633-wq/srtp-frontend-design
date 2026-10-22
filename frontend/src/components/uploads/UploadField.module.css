@@ -173,7 +173,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--color-accent);
+  background: var(--color-accent-line);
   transition: width var(--dur-base) var(--ease-standard);
 }
 

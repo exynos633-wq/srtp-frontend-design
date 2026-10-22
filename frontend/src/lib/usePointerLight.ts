@@ -9,7 +9,7 @@ export function usePointerLight<T extends HTMLElement>() {
     cancelAnimationFrame(frame.current)
     const node = ref.current
     if (!node) return
-    for (const name of ['--tilt-x', '--tilt-y', '--magnet-x', '--magnet-y']) {
+    for (const name of ['--tilt-x', '--tilt-y', '--magnet-x', '--magnet-y', '--shift-x', '--shift-y']) {
       node.style.removeProperty(name)
     }
   }
@@ -30,10 +30,12 @@ export function usePointerLight<T extends HTMLElement>() {
     frame.current = requestAnimationFrame(() => {
       node.style.setProperty('--pointer-x', `${x * 100}%`)
       node.style.setProperty('--pointer-y', `${y * 100}%`)
-      node.style.setProperty('--tilt-x', `${(0.5 - y) * 9}deg`)
-      node.style.setProperty('--tilt-y', `${(x - 0.5) * 9}deg`)
-      node.style.setProperty('--magnet-x', `${(x - 0.5) * 10}px`)
-      node.style.setProperty('--magnet-y', `${(y - 0.5) * 10}px`)
+      node.style.setProperty('--tilt-x', `${(0.5 - y) * 8}deg`)
+      node.style.setProperty('--tilt-y', `${(x - 0.5) * 8}deg`)
+      node.style.setProperty('--magnet-x', `${(x - 0.5) * 12}px`)
+      node.style.setProperty('--magnet-y', `${(y - 0.5) * 12}px`)
+      node.style.setProperty('--shift-x', `${(x - 0.5) * 12}px`)
+      node.style.setProperty('--shift-y', `${(y - 0.5) * 12}px`)
     })
   }
 

@@ -51,7 +51,7 @@ export function HomePage() {
 
         <ExhibitionLight />
         <div className={styles.hero}>
-          <p className={styles.eyebrow}><span /> ARCHITECTURE IN SPACE</p>
+          <p className={styles.eyebrow}><span /> 01 / 城市索引</p>
           <h1 id="home-title" className={styles.heroTitle}>
             <span>从一座城，</span>
             <span>走进<span className={styles.titleAccent}>一座建筑。</span></span>
@@ -65,12 +65,13 @@ export function HomePage() {
             ref={pointerRef}
             onPointerMove={movePointer}
             onPointerLeave={resetPointer}
+            data-cursor-label="进入展馆"
           >
             <span>探索全部作品</span><span className={styles.exploreArrow} aria-hidden="true">↗</span>
           </Link>
           <p className={styles.heroNote}>选择地球上的城市，开启空间探索</p>
         </div>
-        <span className={styles.sceneLabel} aria-hidden="true">SPATIAL ATLAS / 建筑的另一种观看方式</span>
+        <span className={styles.sceneLabel} aria-hidden="true">ARCHITECTURAL COLLECTION / 01—10</span>
 
         <div className={styles.meta}>
           <MockBadge />

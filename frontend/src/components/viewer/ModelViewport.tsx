@@ -561,6 +561,7 @@ export function ModelViewport({
     <div
       ref={rootRef}
       className={classNames(styles.root, className)}
+      data-cursor-label="拖动模型"
       data-viewer-phase={phase}
       data-viewer-ready={ready ? 'true' : 'false'}
       data-viewer-format={info?.format ?? modelFormat ?? ''}

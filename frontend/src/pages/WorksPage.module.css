@@ -82,7 +82,7 @@
   }
 }
 
-/* 单列 → 768 起两列 → 1280 起三列（规范 §4.3）。 */
+/* v3 图片 A 版式：768 两列 → 1024 三列 → 1280 四列。 */
 @media (min-width: 768px) {
   .grid,
   .skeletonGrid {
@@ -90,10 +90,17 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .grid,
   .skeletonGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid,
+  .skeletonGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -103,7 +110,7 @@
   }
 }
 
-/* 展陈目录 v2：顶部留白与作品主次沿用真实排序。 */
+/* v3 图片 A 版式：大标题 + 目录索引；四列等距展板。 */
 .hero {
   position: relative;
   display: flex;
@@ -111,30 +118,55 @@
   justify-content: space-between;
   gap: 32px;
   overflow: hidden;
-  min-height: 300px;
-  padding: 64px 32px 48px;
-  margin: 16px -32px 0;
+  min-height: 280px;
+  padding: 64px var(--page-padding) 44px;
+  margin: 0 calc(var(--page-padding) * -1);
 }
 .heroCopy, .collectionNote { position: relative; z-index: 1; }
-.eyebrow { color: var(--color-warm); font: 10px/1.6 var(--font-latin); letter-spacing: 0.22em; }
-.title { margin-top: 20px; color: #f0ebe1; font: 400 clamp(44px, 5vw, 68px)/1.2 var(--font-display); letter-spacing: -0.03em; }
-.title > span { color: var(--color-warm); }
-.description { margin-top: 18px; color: var(--color-text-secondary); font-size: 14px; }
-.collectionNote { padding-bottom: 4px; color: var(--color-warm); font: 18px/1.8 var(--font-display); text-align: right; }
-.collectionNote > span { color: var(--color-text-muted); font: 12px/1.8 var(--font-sans); }
-.directoryBar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 20px 0; border-block: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: 12px; }
-.divider { margin: 0 14px; color: var(--color-line); }
-.grid { gap: 32px; margin-top: 32px; }
-
-@media (min-width: 1280px) {
-  .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-  .grid > li { grid-column: span 4; }
-  .grid > li:first-child { grid-column: span 7; }
-  .grid > li:nth-child(2) { grid-column: span 5; }
+.eyebrow { color: var(--color-accent-text); font: 10px/1.6 var(--font-latin); letter-spacing: 0.2em; }
+.title {
+  margin-top: 18px;
+  color: var(--color-paper);
+  font: 300 clamp(48px, 6vw, 88px)/1.08 var(--font-display);
+  letter-spacing: -0.02em;
+  animation: works-title-in 900ms var(--ease-exhibit) both;
 }
+.title > span { color: var(--color-accent-line); }
+.description { margin-top: 16px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.7; }
+.collectionNote {
+  padding-bottom: 6px;
+  color: var(--color-text-muted);
+  font: 11px/1.8 var(--font-latin);
+  letter-spacing: 0.14em;
+  text-align: right;
+}
+.collectionNote strong { display: block; color: var(--color-text); font: 300 28px/1.2 var(--font-display); letter-spacing: 0; }
+.directoryBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 0;
+  border-block: 1px solid var(--color-line);
+  color: var(--color-text-secondary);
+  font: 11px/1.6 var(--font-latin);
+  letter-spacing: 0.08em;
+}
+.divider { margin: 0 14px; color: var(--color-line); }
+.grid { gap: 28px; margin-top: 32px; }
+
+@keyframes works-title-in {
+  from { opacity: 0; transform: translateY(26px); clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
+}
+
 @media (max-width: 767px) {
-  .hero { min-height: 240px; padding: 40px 16px 32px; margin: 0 -16px; }
+  .hero { min-height: 220px; padding: 36px var(--page-padding) 28px; margin: 0 calc(var(--page-padding) * -1); }
   .collectionNote { display: none; }
-  .eyebrow { font-size: 9px; letter-spacing: 0.15em; }
-  .grid { gap: 24px; margin-top: 24px; }
+  .eyebrow { font-size: 9px; letter-spacing: 0.14em; }
+  .grid { gap: 26px; margin-top: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title { animation: none; }
 }

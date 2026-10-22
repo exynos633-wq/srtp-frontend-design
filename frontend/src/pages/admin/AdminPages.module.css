@@ -32,7 +32,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--text-label);
   line-height: var(--leading-label);
   font-weight: var(--weight-label);

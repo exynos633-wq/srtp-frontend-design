@@ -19,13 +19,13 @@
 
 .cool {
   right: -8%;
-  background: radial-gradient(ellipse, rgb(112 209 202 / 16%), transparent 65%);
+  background: radial-gradient(ellipse, rgb(237 232 223 / 8%), transparent 66%);
   transform: rotate(-32deg);
 }
 
 .warm {
   left: -24%;
-  background: radial-gradient(ellipse, rgb(221 178 119 / 12%), transparent 65%);
+  background: radial-gradient(ellipse, rgb(237 232 223 / 5%), transparent 64%);
   transform: rotate(32deg);
   animation-delay: 160ms;
 }
@@ -34,9 +34,9 @@
   position: absolute;
   inset: 0;
   opacity: 0.22;
-  background-image: linear-gradient(rgb(184 213 210 / 11%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(184 213 210 / 11%) 1px, transparent 1px);
-  background-size: 96px 96px;
+  background-image: linear-gradient(rgb(237 232 223 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(237 232 223 / 7%) 1px, transparent 1px);
+  background-size: 112px 112px;
   mask-image: linear-gradient(transparent, #000 60%, transparent);
 }
 

@@ -24,10 +24,10 @@ export const INITIAL_VIEW: GlobeView = {
   zoom: 1,
 }
 
-/** 开场从稍微拉远、偏西的视角靠近中国。 */
+/** 开场从更远、偏西南的视角靠近中国；2026-10-22 按观感校准拉大运镜幅度。 */
 export const OPENING_VIEW: GlobeView = {
-  longitude: 95,
-  latitude: 28,
+  longitude: 78,
+  latitude: 20,
   zoom: 1,
 }
 
