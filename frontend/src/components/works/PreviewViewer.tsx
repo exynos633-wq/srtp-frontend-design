@@ -71,9 +71,13 @@ export function PreviewViewer({
   const coverRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
 
-  const [coverState, setCoverState] = useState<'loading' | 'loaded' | 'error'>(
-    work.coverUrl ? 'loading' : 'error',
-  )
+  const [coverResult, setCoverResult] = useState<{
+    url: string
+    status: 'loaded' | 'error'
+  } | null>(null)
+  const coverState = !work.coverUrl ? 'error' : coverResult?.url === work.coverUrl
+    ? coverResult.status
+    : 'loading'
   const [status, setStatus] = useState<PreviewStatus>('idle')
   const [checkError, setCheckError] = useState('')
   const [zoomOpen, setZoomOpen] = useState(false)
@@ -137,7 +141,9 @@ export function PreviewViewer({
   useEffect(() => {
     const image = imageRef.current
     if (!image) return
-    if (image.complete) setCoverState(image.naturalWidth > 0 ? 'loaded' : 'error')
+    if (image.complete) {
+      setCoverResult({ url: work.coverUrl, status: image.naturalWidth > 0 ? 'loaded' : 'error' })
+    }
   }, [work.coverUrl])
 
   // 图片迟迟不返回时也要让右侧信息可读，不能让动画阻塞内容。
@@ -490,13 +496,14 @@ export function PreviewViewer({
           <div className={styles.cover} data-status={status} ref={coverRef}>
             {coverState !== 'error' ? (
               <img
+                key={work.coverUrl}
                 ref={imageRef}
                 className={styles.coverImage}
                 src={work.coverUrl}
                 alt=""
                 draggable={false}
-                onLoad={() => setCoverState('loaded')}
-                onError={() => setCoverState('error')}
+                onLoad={() => setCoverResult({ url: work.coverUrl, status: 'loaded' })}
+                onError={() => setCoverResult({ url: work.coverUrl, status: 'error' })}
               />
             ) : (
               <span className={styles.coverFallback}>
@@ -522,6 +529,7 @@ export function PreviewViewer({
                   onPhase={handleViewerPhase}
                   onReady={handleViewerReady}
                   onError={handleViewerError}
+                  onRetry={beginPreview}
                   onEnd={endPreview}
                   onZoom={status === 'interactive' ? openZoom : undefined}
                   showEnd

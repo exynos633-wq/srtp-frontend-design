@@ -142,4 +142,19 @@ describe('观看区外壳的真实生命周期边界', () => {
     expect(screen.getByText('封面暂不可用')).toBeVisible()
     expect(document.querySelector('img')).toBeNull()
   })
+
+  it('同一作品的失败封面被替换后重新加载，不重建已开始的观看', async () => {
+    const { container, rerender } = render(<PreviewViewer work={work} modelSource={modelSource} />)
+    start()
+    const viewport = await screen.findByTestId('model-viewport-stub')
+    fireEvent.error(container.querySelector('img')!)
+    expect(screen.getByText('封面暂不可用')).toBeVisible()
+
+    rerender(<PreviewViewer work={{ ...work, coverUrl: '/new-cover.png' }} modelSource={modelSource} />)
+    const replacement = container.querySelector('img')
+    expect(replacement).toHaveAttribute('src', '/new-cover.png')
+    fireEvent.load(replacement!)
+    expect(screen.queryByText('封面暂不可用')).toBeNull()
+    expect(screen.getByTestId('model-viewport-stub')).toBe(viewport)
+  })
 })

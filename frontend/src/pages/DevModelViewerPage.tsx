@@ -105,7 +105,6 @@ export default function DevModelViewerPage() {
             value={dprCap}
             onChange={(event) => {
               setDprCap(Number(event.target.value))
-              setReady(false)
             }}
           >
             <option value={1.5}>1.5（首轮默认）</option>

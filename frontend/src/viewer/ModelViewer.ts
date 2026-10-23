@@ -1679,10 +1679,15 @@ export class ModelViewer {
     if (!this.parameterInteractionActive) this.autoRotate.endInteraction(performance.now())
   }
 
-  private onLostPointerCapture = (): void => {
-    this.capturedPointers.clear()
-    if (this.drag || this.touchPointers.size > 0) {
-      this.clearInput()
+  private onLostPointerCapture = (event: PointerEvent): void => {
+    this.capturedPointers.delete(event.pointerId)
+    // 正常 pointerup 也会丢失捕获；不能清掉仍按住的其他触点。
+    if (this.touchPointers.has(event.pointerId)) {
+      this.onPointerUp(event)
+      return
+    }
+    if (this.drag?.pointerId === event.pointerId) {
+      this.drag = null
       this.autoRotate.endInteraction(performance.now())
     }
   }
