@@ -67,6 +67,8 @@ export interface ModelViewportProps {
   onPhase?: (phase: ViewerPhase) => void
   onReady?: (info: ModelInfo) => void
   onError?: (error: ViewerErrorInfo) => void
+  /** 宿主可在重试前重新检查作品状态并解析最新资源。 */
+  onRetry?: () => void
   onEnd?: () => void | Promise<void>
   onZoom?: () => void
   endLabel?: string
@@ -110,6 +112,7 @@ export function ModelViewport({
   onPhase,
   onReady,
   onError,
+  onRetry,
   onEnd,
   onZoom,
   endLabel = '结束预览',
@@ -769,7 +772,7 @@ export function ModelViewport({
               <p className={styles.errorCode}>错误代码：{error.code}</p>
               <div className={styles.statusActions}>
                 {error.retryable ? (
-                  <Button variant="primary" onClick={() => void viewerRef.current?.reload()}>
+                  <Button variant="primary" onClick={() => onRetry ? onRetry() : void viewerRef.current?.reload()}>
                     手动重试
                   </Button>
                 ) : null}
