@@ -45,8 +45,8 @@ const COPY: Record<ViewerErrorCode, Omit<ViewerErrorInfo, 'code'>> = {
   },
   MAGIC: {
     title: '无法识别模型内容',
-    message: '文件头既不是 GLB（glTF 二进制）也不是标准 3DGS PLY。',
-    advice: '只支持 glTF 2.0 GLB 与二进制小端 3DGS PLY；请核对文件本身，而不是只看后缀。',
+    message: '文件头既不是 GLB（glTF 二进制），也不是可识别的 PLY（网格或 3DGS）。',
+    advice: '支持 glTF 2.0 GLB，以及带 x/y/z 顶点和 face 面片的网格 PLY / 标准 3DGS PLY；请核对文件本身，而不是只看后缀。',
     retryable: false,
   },
   PLY_HEADER: {
@@ -57,26 +57,26 @@ const COPY: Record<ViewerErrorCode, Omit<ViewerErrorInfo, 'code'>> = {
   },
   PLY_FORMAT: {
     title: 'PLY 编码不受支持',
-    message: '首期只接受 binary_little_endian 1.0 的 3DGS PLY。',
-    advice: 'ASCII、binary_big_endian、压缩或未知 PLY 需要先转换为标准 3DGS 二进制小端格式。',
+    message: '该 PLY 的编码或数值类型不受支持。',
+    advice: '网格 PLY 支持 ASCII、binary_little_endian 与 binary_big_endian 1.0；3DGS PLY 仍只支持 binary_little_endian 1.0 与 float 属性。',
     retryable: false,
   },
   PLY_FIELDS: {
-    title: 'PLY 不是标准 3DGS',
-    message: '缺少 x/y/z、f_dc_0..2、f_rest 标准组合、opacity、scale_0..2 或 rot_0..3。',
-    advice: '普通点云不能当作高斯泼溅。请提供完整 3DGS 属性（球谐 0/9/24/45 个系数）。',
+    title: 'PLY 内容不是可显示的模型',
+    message: '网格 PLY 缺少 x/y/z 或 face vertex_indices；3DGS PLY 缺少标准高斯属性。',
+    advice: '网格需要 face 面片；普通点云不能当作网格或高斯泼溅。3DGS 需要完整 f_dc_0..2、opacity、scale 与 rot 属性。',
     retryable: false,
   },
   PLY_LENGTH: {
     title: 'PLY 数据长度不一致',
-    message: '文件长度与头部声明的顶点数、每行字节数不匹配。',
-    advice: '文件可能被截断或并非二进制 PLY，请重新导出。',
+    message: '文件长度与头部声明的元素数量/每行字节数不匹配。',
+    advice: '文件可能被截断或并非声明的 PLY 编码，请重新导出。',
     retryable: false,
   },
   PLY_VALUES: {
     title: 'PLY 含无效数值',
-    message: '顶点数据中存在 NaN、Infinity 或零四元数。',
-    advice: '请在导出端检查高斯参数；查看器不会用 0 或猜测值替代损坏数据。',
+    message: '顶点、面索引或高斯参数中存在 NaN、Infinity、越界索引或零四元数。',
+    advice: '请在导出端检查几何与高斯参数；查看器不会用 0 或猜测值替代损坏数据。',
     retryable: false,
   },
   GLB_HEADER: {

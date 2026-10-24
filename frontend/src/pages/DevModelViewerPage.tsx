@@ -78,7 +78,7 @@ export default function DevModelViewerPage() {
           <p className={styles.eyebrow}>DEV ONLY · /dev/model-viewer</p>
           <h1 className={styles.title}>客户端模型查看器测试台</h1>
           <p className={styles.description}>
-            本地选择或替换 GLB / 3DGS PLY 后立即加载。File 只在本页内存中读取，不上传、不缓存、不请求外部资源；
+            本地选择或替换 GLB / 网格 PLY / 3DGS PLY 后立即加载。File 只在本页内存中读取，不上传、不缓存、不请求外部资源；
             生产构建不包含本页与本地模型映射。
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function DevModelViewerPage() {
           ) : (
             <div className={styles.empty}>
               <p className={styles.emptyTitle}>尚未选择本地模型</p>
-              <p className={styles.emptyText}>支持 .glb 与标准 3DGS .ply；格式按文件头识别，不只信后缀。</p>
+              <p className={styles.emptyText}>支持 .glb、网格 .ply 与标准 3DGS .ply；格式按文件头识别，不只信后缀。</p>
               <Button variant="primary" onClick={() => inputRef.current?.click()}>
                 选择本地模型
               </Button>

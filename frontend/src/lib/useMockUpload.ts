@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { getMockUpload, startMockUpload } from '../api/mockUploads'
+import { getUploadAsset, uploadAsset, validateUploadFile } from '../api/uploads'
 import { handleAdminAuthFailure } from '../api/adminSession'
 import { ApiError } from '../api/http'
 import { queryKeys } from '../api/queryKeys'
+import { isMocksActive } from '../app/mocksStatus'
+import { isUploadSimulationEnabled } from '../api/mockUploads'
 import type {
+  UploadAsset,
   UploadAssetKind,
   UploadAssetStatus,
   UploadSimulationAsset,
@@ -12,25 +16,31 @@ import type {
 import type { ModelFormat } from '../types/work'
 
 /**
- * 单个模型或封面的开发模拟上传状态。
+ * 单个模型或封面的上传状态。
  *
- * 只使用 metadata 与 Mock 返回的 assetId；requestId 负责隔离取消/重选/切作品，
- * 服务端登记负责最终 ready 与 kind 判定。模型文件内容不会被读取。
+ * 开发环境且 MSW 已实际启用时走原有 metadata 模拟；其他情况走正式
+ * POST /admin/assets multipart 接口。requestId 隔离取消/重选/切作品，
+ * 服务端决定最终 ready/failed 与 modelFormat。
  */
-export type MockUploadSelectionStatus = UploadAssetStatus
+export type UploadSelectionStatus = UploadAssetStatus
+export type UploadMode = 'simulated' | 'live'
 
-export interface MockUploadSelection {
+export interface UploadSelection {
   requestId: number
   file: File
-  status: MockUploadSelectionStatus
+  status: UploadSelectionStatus
   assetId: string | null
+  /** 真实上传字节进度；模拟模式是明确标注的模拟值。 */
+  progress: number
+  /** 兼容旧字段名；值与 progress 同源。 */
   simulatedProgress: number
   error: string
   modelFormat: ModelFormat | null
 }
 
-export interface UseMockUploadResult {
-  selection: MockUploadSelection | null
+export interface UseAssetUploadResult {
+  mode: UploadMode
+  selection: UploadSelection | null
   /** 仅封面：本地预览对象 URL；模型永远为 null。 */
   objectUrl: string | null
   wasCanceled: boolean
@@ -41,6 +51,11 @@ export interface UseMockUploadResult {
   cancel: () => void
   clearAfterSave: () => void
 }
+
+/** 旧名字保留给已有测试与调用点，行为已覆盖正式上传。 */
+export type MockUploadSelectionStatus = UploadSelectionStatus
+export type MockUploadSelection = UploadSelection
+export type UseMockUploadResult = UseAssetUploadResult
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -70,23 +85,36 @@ function revokeCoverObjectUrl(url: string | null): void {
   if (url && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(url)
 }
 
+function progressFromAsset(
+  current: UploadSelection,
+  asset: UploadSimulationAsset | UploadAsset,
+): number {
+  if ('simulatedProgress' in asset && asset.simulatedProgress !== null) {
+    return asset.simulatedProgress
+  }
+  return asset.status === 'ready' ? 100 : current.progress
+}
+
 function selectionFromAsset(
-  current: MockUploadSelection,
-  asset: UploadSimulationAsset,
-): MockUploadSelection {
+  current: UploadSelection,
+  asset: UploadSimulationAsset | UploadAsset,
+): UploadSelection {
+  const progress = progressFromAsset(current, asset)
   return {
     ...current,
     status: asset.status,
     assetId: asset.assetId,
-    simulatedProgress: asset.simulatedProgress ?? 0,
+    progress,
+    simulatedProgress: progress,
     error: asset.error ?? '',
-    modelFormat: asset.modelFormat,
+    modelFormat: asset.modelFormat ?? null,
   }
 }
 
-export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
+export function useAssetUpload(kind: UploadAssetKind): UseAssetUploadResult {
+  const simulated = isUploadSimulationEnabled(import.meta.env.DEV, isMocksActive())
   const client = useQueryClient()
-  const [selection, setSelection] = useState<MockUploadSelection | null>(null)
+  const [selection, setSelection] = useState<UploadSelection | null>(null)
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const [wasCanceled, setWasCanceled] = useState(false)
 
@@ -109,7 +137,7 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
         mountedRef.current &&
         activeRequestRef.current === requestId &&
         client.getQueryData(queryKeys.auth.me()) != null
-      const apply = (asset: UploadSimulationAsset) => {
+      const apply = (asset: UploadSimulationAsset | UploadAsset) => {
         if (!isActive()) return
         setSelection((current) =>
           current && current.requestId === requestId
@@ -117,23 +145,43 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
             : current,
         )
       }
+      const setProgress = (percent: number) => {
+        if (!isActive()) return
+        setSelection((current) =>
+          current && current.requestId === requestId
+            ? {
+                ...current,
+                progress: percent,
+                simulatedProgress: percent,
+              }
+            : current,
+        )
+      }
 
       try {
-        let asset = await startMockUpload(
-          {
-            kind,
-            originalName: file.name,
-            sizeBytes: file.size,
-            mimeType: file.type,
-          },
-          { signal },
-        )
-        apply(asset)
+        let asset: UploadAsset
+        if (simulated) {
+          asset = await startMockUpload(
+            {
+              kind,
+              originalName: file.name,
+              sizeBytes: file.size,
+              mimeType: file.type,
+            },
+            { signal },
+          )
+          apply(asset)
+        } else {
+          asset = await uploadAsset(file, kind, { signal, onProgress: setProgress })
+          apply(asset)
+        }
 
         while (asset.status === 'receiving' || asset.status === 'validating') {
           await sleep(asset.status === 'receiving' ? 140 : 180, signal)
           if (!isActive()) return
-          asset = await getMockUpload(asset.assetId, { signal })
+          asset = simulated
+            ? await getMockUpload(asset.assetId, { signal })
+            : await getUploadAsset(asset.assetId, signal)
           apply(asset)
         }
       } catch (error) {
@@ -150,7 +198,11 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
         }
         if (!isActive()) return
         const message =
-          error instanceof ApiError ? error.message : '模拟上传失败，请重试。'
+          error instanceof Error && error.message
+            ? error.message
+            : simulated
+              ? '模拟上传失败，请重试。'
+              : '上传失败，请重试。'
         setSelection((current) =>
           current && current.requestId === requestId
             ? { ...current, status: 'failed', error: message }
@@ -158,7 +210,7 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
         )
       }
     },
-    [client, kind, revokeObjectUrl],
+    [client, kind, revokeObjectUrl, simulated],
   )
 
   const beginUpload = useCallback(
@@ -180,11 +232,27 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
       }
 
       setWasCanceled(false)
+      const invalid = validateUploadFile(file, kind)
+      if (invalid) {
+        setSelection({
+          requestId,
+          file,
+          status: 'failed',
+          assetId: null,
+          progress: 0,
+          simulatedProgress: 0,
+          error: invalid,
+          modelFormat: null,
+        })
+        return
+      }
+
       setSelection({
         requestId,
         file,
         status: 'receiving',
         assetId: null,
+        progress: 0,
         simulatedProgress: 0,
         error: '',
         modelFormat: null,
@@ -239,6 +307,7 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
     selection?.status === 'ready' && selection.assetId ? selection.assetId : undefined
 
   return {
+    mode: simulated ? 'simulated' : 'live',
     selection,
     objectUrl,
     wasCanceled,
@@ -249,4 +318,9 @@ export function useMockUpload(kind: UploadAssetKind): UseMockUploadResult {
     cancel,
     clearAfterSave,
   }
+}
+
+/** 兼容旧调用名；实际按环境选择模拟或正式上传。 */
+export function useMockUpload(kind: UploadAssetKind): UseAssetUploadResult {
+  return useAssetUpload(kind)
 }

@@ -171,6 +171,10 @@ export function ModelViewport({
   const initialAutoRotate = autoRotateDefault ?? !reducedMotion
   const isGaussian = info?.format === 'gaussian-ply' || (!info && modelFormat === 'gaussian-ply')
   const isGlb = info?.format === 'glb' || (!info && modelFormat === 'glb')
+  const isSceneMesh =
+    info?.format === 'glb' ||
+    info?.format === 'mesh-ply' ||
+    (!info && (modelFormat === 'glb' || modelFormat === 'mesh-ply'))
 
   useEffect(() => {
     callbacksRef.current = { onPhase, onReady, onError, onEnd }
@@ -801,7 +805,7 @@ export function ModelViewport({
               </div>
               <div>
                 <dt>格式</dt>
-                <dd>{info?.format === 'gaussian-ply' ? '3DGS 高斯 PLY' : info?.format === 'glb' ? 'glTF 2.0 GLB' : isGaussian ? '3DGS 高斯 PLY' : isGlb ? 'glTF 2.0 GLB' : '—'}</dd>
+                <dd>{info?.format === 'gaussian-ply' ? '3DGS 高斯 PLY' : info?.format === 'mesh-ply' ? 'PLY 网格' : info?.format === 'glb' ? 'glTF 2.0 GLB' : isGaussian ? '3DGS 高斯 PLY' : isGlb ? 'glTF 2.0 GLB' : '—'}</dd>
               </div>
               <div>
                 <dt>大小</dt>
@@ -1133,7 +1137,7 @@ export function ModelViewport({
           <p className={styles.settingHint}>
             {isGaussian
               ? '只乘每个高斯的局部尺度，不缩放整个 Object3D，不重建点数据。'
-              : '仅高斯 PLY 可用；GLB 不提供整体或局部尺寸缩放。'}
+              : '仅高斯 PLY 可用；GLB 与网格 PLY 不提供整体或局部尺寸缩放。'}
           </p>
 
           <div className={styles.settingRow}>
@@ -1144,7 +1148,7 @@ export function ModelViewport({
               id="viewer-soft-light"
               type="checkbox"
               checked={softLight}
-              disabled={!isGlb}
+              disabled={!isSceneMesh}
               onChange={toggleSoftLight}
             />
           </div>
@@ -1159,7 +1163,7 @@ export function ModelViewport({
               max="2"
               step="0.05"
               value={lightIntensity}
-              disabled={!isGlb || !softLight}
+              disabled={!isSceneMesh || !softLight}
               onPointerDown={() => viewerRef.current?.beginParameterInteraction()}
               onPointerUp={() => viewerRef.current?.endParameterInteraction()}
               onPointerCancel={() => viewerRef.current?.endParameterInteraction()}
@@ -1169,7 +1173,9 @@ export function ModelViewport({
             <output className={styles.mono}>×{lightIntensity.toFixed(2)}</output>
           </div>
           <p className={styles.settingHint}>
-            {isGlb ? '仅 GLB 使用不可见场景补光，保留原材质与贴图；默认强度 1。' : '仅 GLB 可用；高斯使用自身颜色。'}
+            {isSceneMesh
+              ? 'GLB / 网格 PLY 使用不可见场景补光，保留原材质与顶点色；默认强度 1。'
+              : '仅 GLB / 网格 PLY 可用；高斯使用自身颜色。'}
           </p>
 
           <div className={styles.settingRow}>

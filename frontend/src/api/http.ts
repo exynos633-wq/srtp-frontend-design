@@ -45,7 +45,7 @@ function isApiErrorBody(value: unknown): value is ApiErrorBody {
   return typeof code === 'string' && typeof message === 'string'
 }
 
-function normalizeError(status: number, payload: unknown): ApiError {
+export function normalizeError(status: number, payload: unknown): ApiError {
   if (isApiErrorBody(payload)) {
     const { code, message, fields } = payload.error
     return new ApiError(message, { status, code, fields })
@@ -56,7 +56,7 @@ function normalizeError(status: number, payload: unknown): ApiError {
   })
 }
 
-function joinUrl(base: string, path: string): string {
+export function joinUrl(base: string, path: string): string {
   const normalizedBase = base.replace(/\/+$/, '')
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${normalizedBase}${normalizedPath}`

@@ -17,7 +17,7 @@ const DEV_FILE_BY_ASSET: Record<string, string> = {
 export function resolveDevModelSource(workId: string): ModelSource | null {
   const work = getDatabase().works.find((item) => item.id === workId)
   if (!work || !work.modelAssetId || !work.modelFormat) return null
-  const extension = work.modelFormat === 'gaussian-ply' ? 'ply' : 'glb'
+  const extension = work.modelFormat === 'glb' ? 'glb' : 'ply'
   const fileName = DEV_FILE_BY_ASSET[work.modelAssetId] ?? `${work.id}.${extension}`
   return {
     kind: 'url',

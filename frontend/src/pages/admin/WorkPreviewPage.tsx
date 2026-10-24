@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusMessage } from '../../components/ui/StatusMessage'
 import { PreviewViewer } from '../../components/works/PreviewViewer'
-import { resolveWorkModelSource } from '../../viewer/workModelSource'
+import { resolveAdminWorkModelSource } from '../../viewer/workModelSource'
 import {
   modelFormatLabel,
   workDisplayName,
@@ -151,7 +151,7 @@ export default function WorkPreviewPage() {
                 coverUrl: work.coverUrl ?? '',
                 modelFormat: work.modelFormat,
               }}
-              resolveModelSource={resolveWorkModelSource}
+              resolveModelSource={resolveAdminWorkModelSource}
             />
           </div>
 
