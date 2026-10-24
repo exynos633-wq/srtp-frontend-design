@@ -145,7 +145,7 @@ test('返回首页恢复视角并且不重播开场', async ({ page }) => {
   await waitForSettledHome(page)
 
   const initialBox = await cityPoint(page, '北京市').boundingBox()
-  await page.mouse.click(120, 650)
+  await stage(page).focus()
   await page.keyboard.press('+')
   await page.keyboard.press('+')
   await page.waitForTimeout(250)
@@ -153,7 +153,7 @@ test('返回首页恢复视角并且不重播开场', async ({ page }) => {
   expect(zoomedBox).not.toBeNull()
   expect((zoomedBox?.x ?? 0) - (initialBox?.x ?? 0)).toBeGreaterThan(5)
 
-  await page.getByRole('link', { name: '全部作品' }).click()
+  await page.getByRole('link', { name: '全部作品', exact: true }).click()
   await expect(page.getByRole('heading', { name: '全部作品' })).toBeVisible()
   await page.goBack()
 

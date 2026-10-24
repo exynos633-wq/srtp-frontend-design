@@ -6,6 +6,8 @@ import { queryKeys } from '../api/queryKeys'
 import { isMocksActive } from '../app/mocksStatus'
 import { MockBadge } from '../mocks/MockBadge'
 import { Button } from '../components/ui/Button'
+import { ExhibitionLight } from '../components/ui/ExhibitionLight'
+import { usePointerLight } from '../lib/usePointerLight'
 import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
 import { isWebGLAvailable } from '../lib/globeMath'
 import styles from './HomePage.module.css'
@@ -13,6 +15,7 @@ import styles from './HomePage.module.css'
 const GlobeExperience = lazy(() => import('../components/globe/GlobeExperience'))
 
 export function HomePage() {
+  const { ref: pointerRef, onPointerMove: movePointer, onPointerLeave: resetPointer } = usePointerLight<HTMLAnchorElement>()
   const reducedMotion = usePrefersReducedMotion()
   const [webglAvailable] = useState(() => isWebGLAvailable())
   const citiesQuery = useQuery({
@@ -35,10 +38,6 @@ export function HomePage() {
       data-home-page="true"
       data-home-webgl={webglAvailable ? 'true' : 'false'}
     >
-      <h1 id="home-title" className={styles.srOnly}>
-        从城市进入建筑模型
-      </h1>
-
       <div className={styles.scene} data-home-scene="true">
         {webglAvailable ? (
           <GlobeErrorBoundary fallback={<GlobeFallback />}>
@@ -49,6 +48,29 @@ export function HomePage() {
         ) : (
           <GlobeFallback />
         )}
+
+        <ExhibitionLight />
+        <div className={styles.hero}>
+          <p className={styles.eyebrow}><span /> ARCHITECTURE IN SPACE</p>
+          <h1 id="home-title" className={styles.heroTitle}>
+            <span>从一座城，</span>
+            <span>走进<span className={styles.titleAccent}>一座建筑。</span></span>
+          </h1>
+          <p className={styles.heroDescription}>
+            穿越地图与尺度，在三维空间中，<br />重新发现建筑的形态与细节。
+          </p>
+          <Link
+            className={styles.explore}
+            to="/works"
+            ref={pointerRef}
+            onPointerMove={movePointer}
+            onPointerLeave={resetPointer}
+          >
+            <span>探索全部作品</span><span className={styles.exploreArrow} aria-hidden="true">↗</span>
+          </Link>
+          <p className={styles.heroNote}>选择地球上的城市，开启空间探索</p>
+        </div>
+        <span className={styles.sceneLabel} aria-hidden="true">SPATIAL ATLAS / 建筑的另一种观看方式</span>
 
         <div className={styles.meta}>
           <MockBadge />

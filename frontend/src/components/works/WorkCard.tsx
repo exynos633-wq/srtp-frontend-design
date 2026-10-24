@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router'
+import { usePointerLight } from '../../lib/usePointerLight'
 import styles from './WorkCard.module.css'
 
 export interface WorkCardOpenSource {
@@ -20,6 +21,7 @@ export interface WorkCardProps {
   selected?: boolean
   /** 仅用于同页导航的来源记录；新标签页、键盘菜单等不传来源。 */
   onOpen?: (source: WorkCardOpenSource) => void
+  ordinal?: number
 }
 
 export function WorkCard({
@@ -30,7 +32,9 @@ export function WorkCard({
   coverUrl,
   selected = false,
   onOpen,
+  ordinal,
 }: WorkCardProps) {
+  const { ref: pointerRef, onPointerMove: movePointer, onPointerLeave: resetPointer } = usePointerLight<HTMLAnchorElement>()
   const mediaRef = useRef<HTMLSpanElement>(null)
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
@@ -49,6 +53,9 @@ export function WorkCard({
     ) {
       return
     }
+    // 读取来源前让内层即时归正，避免倾斜矩形与 Flip 代理起点不一致。
+    event.currentTarget.dataset.opening = 'true'
+    resetPointer()
     onOpen?.({
       workId,
       coverUrl: coverLoaded ? coverUrl ?? null : null,
@@ -61,36 +68,48 @@ export function WorkCard({
       <Link
         id={`work-card-link-${workId}`}
         className={styles.card}
+        ref={pointerRef}
         to={href}
         onClick={handleClick}
+        onPointerMove={movePointer}
+        onPointerLeave={(event) => {
+          resetPointer()
+          delete event.currentTarget.dataset.opening
+        }}
       >
-        <span
-          className={styles.media}
-          data-selected={selected ? 'true' : undefined}
-          data-cover-ready={coverLoaded ? 'true' : undefined}
-          ref={mediaRef}
-        >
-          {hasCover ? (
-            <img
-              className={styles.image}
-              src={coverUrl ?? ''}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              draggable={false}
-              onLoad={() => setLoadedUrl(coverUrl ?? null)}
-              onError={() => setFailedUrl(coverUrl ?? null)}
-            />
-          ) : (
-            <span className={styles.fallback}>
-              <span className={styles.fallbackMark} aria-hidden="true" />
-              <span>{coverUrl ? '封面暂不可用' : '暂无封面'}</span>
+        <span className={styles.surface}>
+          <span
+            className={styles.media}
+            data-selected={selected ? 'true' : undefined}
+            data-cover-ready={coverLoaded ? 'true' : undefined}
+            ref={mediaRef}
+          >
+            {ordinal != null && <span className={styles.ordinal} aria-hidden="true">{String(ordinal).padStart(2, '0')} / COLLECTION</span>}
+            {hasCover ? (
+              <img
+                className={styles.image}
+                src={coverUrl ?? ''}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                onLoad={() => setLoadedUrl(coverUrl ?? null)}
+                onError={() => setFailedUrl(coverUrl ?? null)}
+              />
+            ) : (
+              <span className={styles.fallback}>
+                <span className={styles.fallbackMark} aria-hidden="true" />
+                <span>{coverUrl ? '封面暂不可用' : '暂无封面'}</span>
+              </span>
+            )}
+          </span>
+          <span className={styles.body}>
+            <span className={styles.caption}>
+              <h3 className={styles.title}>{title}</h3>
+              <span className={styles.city}>{cityName ?? '未设置城市'}</span>
             </span>
-          )}
-        </span>
-        <span className={styles.body}>
-          <h3 className={styles.title}>{title}</h3>
-          <span className={styles.city}>{cityName ?? '未设置城市'}</span>
+            <span className={styles.arrow} aria-hidden="true">↗</span>
+          </span>
         </span>
       </Link>
     </li>

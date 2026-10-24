@@ -1,5 +1,6 @@
 /**
- * 深色 v1.0 设计变量（唯一来源：UI设计/视觉规范v1.0（深色）.md）。
+ * 深色基础变量；公开端 v2 的表面覆盖位于 PublicLayout.module.css。
+ * 设计依据：UI设计/视觉规范v1.0（深色）.md、UI设计/视觉升级v2实施记录.md。
  *
  * 约定：
  * - 颜色、字号、间距、圆角、层级与动效时长只在此处定义，页面和组件通过 var() 引用。
@@ -8,6 +9,11 @@
  */
 
 :root {
+  /* 展示端 v2：展示标题与工具界面文字使用不同尺度。 */
+  --font-display: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+  --ease-exhibit: cubic-bezier(0.16, 1, 0.3, 1);
+  --color-warm: #ddbc8b;
+  --text-display: clamp(48px, 5.5vw, 84px);
   /* —— 色彩（规范 §2.1） —— */
   --color-bg: #080d12;
   --color-panel: #121d26;

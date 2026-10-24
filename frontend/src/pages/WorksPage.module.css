@@ -102,3 +102,39 @@
     animation: none;
   }
 }
+
+/* 展陈目录 v2：顶部留白与作品主次沿用真实排序。 */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  overflow: hidden;
+  min-height: 300px;
+  padding: 64px 32px 48px;
+  margin: 16px -32px 0;
+}
+.heroCopy, .collectionNote { position: relative; z-index: 1; }
+.eyebrow { color: var(--color-warm); font: 10px/1.6 var(--font-latin); letter-spacing: 0.22em; }
+.title { margin-top: 20px; color: #f0ebe1; font: 400 clamp(44px, 5vw, 68px)/1.2 var(--font-display); letter-spacing: -0.03em; }
+.title > span { color: var(--color-warm); }
+.description { margin-top: 18px; color: var(--color-text-secondary); font-size: 14px; }
+.collectionNote { padding-bottom: 4px; color: var(--color-warm); font: 18px/1.8 var(--font-display); text-align: right; }
+.collectionNote > span { color: var(--color-text-muted); font: 12px/1.8 var(--font-sans); }
+.directoryBar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 20px 0; border-block: 1px solid var(--color-line); color: var(--color-text-secondary); font-size: 12px; }
+.divider { margin: 0 14px; color: var(--color-line); }
+.grid { gap: 32px; margin-top: 32px; }
+
+@media (min-width: 1280px) {
+  .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .grid > li { grid-column: span 4; }
+  .grid > li:first-child { grid-column: span 7; }
+  .grid > li:nth-child(2) { grid-column: span 5; }
+}
+@media (max-width: 767px) {
+  .hero { min-height: 240px; padding: 40px 16px 32px; margin: 0 -16px; }
+  .collectionNote { display: none; }
+  .eyebrow { font-size: 9px; letter-spacing: 0.15em; }
+  .grid { gap: 24px; margin-top: 24px; }
+}

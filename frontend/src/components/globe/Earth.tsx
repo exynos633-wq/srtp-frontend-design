@@ -35,7 +35,7 @@ export function Earth() {
 
   return (
     <group>
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={0.42} />
       <FollowLight />
       <mesh>
         <sphereGeometry args={[1, 96, 64]} />
@@ -55,10 +55,11 @@ function FollowLight() {
   useFrame(() => {
     if (!light.current) return
     light.current.position.copy(camera.position).multiplyScalar(1.25)
-    light.current.position.y += 1.2
+    light.current.position.y += 3.2
+    light.current.position.x -= 2
   })
 
-  return <directionalLight ref={light} intensity={2.1} color="#dceff1" />
+  return <directionalLight ref={light} intensity={2.8} color="#f2e7d3" />
 }
 
 function Atmosphere() {
@@ -79,7 +80,7 @@ function Atmosphere() {
         varying vec3 vViewNormal;
         void main() {
           float rim = pow(1.0 - abs(vViewNormal.z), 3.0);
-          gl_FragColor = vec4(uColor, rim * 0.18);
+          gl_FragColor = vec4(uColor, rim * 0.26);
         }
       `,
       transparent: true,

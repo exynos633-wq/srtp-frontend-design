@@ -16,13 +16,6 @@ export interface CoverTransitionOptions {
   coverUrl: string
 }
 
-function readRadius(): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue('--radius-panel')
-    .trim()
-  return value || '8px'
-}
-
 /** 来源已经离开视口、尺寸退化或裁切比例差太多时，改用独立入场路径。 */
 export function canUseCoverSource(source: CoverSource, target: DOMRect): boolean {
   const { rect } = source
@@ -38,8 +31,8 @@ export function canUseCoverSource(source: CoverSource, target: DOMRect): boolean
   }
   const sourceAspect = rect.width / rect.height
   const targetAspect = target.width / target.height
-  // 城市气泡的方形缩略图与详情 16:10 封面是同一封面的可衔接裁剪。
-  return Math.abs(sourceAspect - targetAspect) / targetAspect < 0.4
+  // 城市气泡为方形，v2 详情为 16:9；允许两者连续交接，极端长宽比仍独立入场。
+  return Math.max(sourceAspect, targetAspect) / Math.min(sourceAspect, targetAspect) <= 1.8
 }
 
 export function runCoverTransition({
@@ -48,7 +41,7 @@ export function runCoverTransition({
   onEntered,
   coverUrl,
 }: CoverTransitionOptions): () => void {
-  const radius = readRadius()
+  const targetStyle = getComputedStyle(target)
   const mask = document.createElement('div')
   mask.setAttribute('aria-hidden', 'true')
   mask.style.cssText = [
@@ -71,15 +64,15 @@ export function runCoverTransition({
     'z-index:200',
     'pointer-events:none',
     'overflow:hidden',
-    `border-radius:${radius}`,
-    'background:var(--color-image-bed, #20272b)',
+    `border-radius:${targetStyle.borderRadius}`,
+    `background:${targetStyle.backgroundColor}`,
   ].join(';')
 
   const image = document.createElement('img')
   image.src = coverUrl
   image.alt = ''
   image.draggable = false
-  image.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;'
+  image.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;'
 
   layer.append(image)
   document.body.append(mask, layer)

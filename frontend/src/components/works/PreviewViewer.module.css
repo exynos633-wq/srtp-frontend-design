@@ -382,3 +382,52 @@
     height: min(74vh, 620px);
   }
 }
+
+/* 公开展陈版：控制和真实 canvas 的坐标、生命周期保持原有结构。 */
+:global([data-exhibition-viewer]) .viewer {
+  padding: 10px;
+  border-color: rgb(181 208 202 / 20%);
+  border-radius: 22px;
+  background: linear-gradient(145deg, #202b30, #111b21);
+  box-shadow: 0 32px 80px rgb(0 0 0 / 24%), inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+:global([data-exhibition-viewer]) .cover {
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-image-bed);
+}
+:global([data-exhibition-viewer]) .statusPanel {
+  width: 100%;
+  padding: 20px 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-items: start;
+  text-align: left;
+  border-color: rgb(203 222 218 / 20%);
+  border-radius: 16px;
+  background: rgb(14 23 29 / 92%);
+  box-shadow: 0 16px 50px rgb(0 0 0 / 22%);
+  backdrop-filter: blur(16px);
+}
+:global([data-exhibition-viewer]) .statusTitle { font: 400 24px/1.5 var(--font-display); }
+:global([data-exhibition-viewer]) .statusText { font-size: 12px; line-height: 1.8; }
+:global([data-exhibition-viewer]) .footer { padding: 12px 14px; border: 0; }
+:global([data-exhibition-viewer]) .zoomed .cover { aspect-ratio: auto; }
+@media (max-width: 767px) {
+  :global([data-exhibition-viewer]) .viewer { padding: 6px; border-radius: 16px; }
+  :global([data-exhibition-viewer]) .cover { min-height: 0; }
+  :global([data-exhibition-viewer]) .statusPanel { padding: 16px; }
+  :global([data-exhibition-viewer]) .statusTitle { font-size: 20px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :global([data-exhibition-viewer]) .statusPanel { background: #131d23; backdrop-filter: none; }
+}
+
+:global([data-exhibition-viewer]) .cover { width: 100%; min-width: 0; }
+:global([data-exhibition-viewer]) .statusTitle,
+:global([data-exhibition-viewer]) .statusText { grid-column: 1; }
+:global([data-exhibition-viewer]) .statusAction { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+@media (max-width: 767px) {
+  :global([data-exhibition-viewer]) .statusPanel { grid-template-columns: minmax(0, 1fr); }
+  :global([data-exhibition-viewer]) .statusAction { grid-column: 1; grid-row: auto; }
+}

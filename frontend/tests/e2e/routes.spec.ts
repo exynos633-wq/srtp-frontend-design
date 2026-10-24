@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 // 每条用例都直接打开目标地址并刷新一次：验证前端路由能接管深层路径。
 // 注意：这只证明开发服务器的 history 回退可用，不代表生产部署已配置回退。
 const routes = [
-  { path: '/', heading: '从城市进入建筑模型' },
+  { path: '/', heading: /从一座城，.*走进.*一座建筑/ },
   { path: '/works', heading: '全部作品' },
   { path: '/works/work_demo_001', heading: '院落模型' },
   { path: '/admin/login', heading: '管理员登录' },
