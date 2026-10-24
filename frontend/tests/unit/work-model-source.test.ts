@@ -22,6 +22,7 @@ vi.mock('../../src/api/http', async (importOriginal) => {
   return { ...actual, apiRequest: api.request }
 })
 
+import { ApiError } from '../../src/api/http'
 import {
   resolveAdminWorkModelSource,
   resolveWorkModelSource,
@@ -84,13 +85,27 @@ describe('预览配置来源适配', () => {
     expect(source?.kind === 'url' ? source.url : '').toContain('/api/admin/works/')
   })
 
-  it('远程模式、缺失 source 或 404 都返回 null，不伪造来源', async () => {
+  it('远程模式、缺失 source 或明确的 NO_MODEL 都返回 null', async () => {
     api.request.mockResolvedValueOnce({ ...config, mode: 'remote', source: null })
     api.request.mockResolvedValueOnce({ ...config, source: null })
-    api.request.mockRejectedValueOnce(new Error('NO_MODEL'))
+    api.request.mockRejectedValueOnce(new ApiError('没有模型', { status: 404, code: 'NO_MODEL' }))
     await expect(resolveWorkModelSource('a')).resolves.toBeNull()
     await expect(resolveWorkModelSource('b')).resolves.toBeNull()
     await expect(resolveWorkModelSource('c')).resolves.toBeNull()
+  })
+
+  it.each([
+    [0, 'NETWORK_ERROR'],
+    [500, 'INTERNAL_ERROR'],
+    [401, 'UNAUTHORIZED'],
+    [403, 'FORBIDDEN'],
+    [404, 'NOT_FOUND'],
+    [200, 'INVALID_RESPONSE'],
+  ])('公开和管理来源保留 %s / %s 错误供调用者处理', async (status, code) => {
+    const error = new ApiError('请求失败', { status, code })
+    api.request.mockRejectedValue(error)
+    await expect(resolveWorkModelSource('a')).rejects.toBe(error)
+    await expect(resolveAdminWorkModelSource('a')).rejects.toBe(error)
   })
 
   it('DEV 且 MSW 实际启用时仍使用本地开发适配', async () => {

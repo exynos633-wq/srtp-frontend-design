@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { getAdminWork } from '../../api/adminWorks'
 import { isApiError } from '../../api/http'
@@ -19,6 +19,7 @@ import styles from './WorkPreviewPage.module.css'
 
 export default function WorkPreviewPage() {
   const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
   const titleRef = useRef<HTMLHeadingElement>(null)
   const stateHeadingRef = useRef<HTMLHeadingElement>(null)
   const focusedTitleRef = useRef<string | null>(null)
@@ -151,7 +152,11 @@ export default function WorkPreviewPage() {
                 coverUrl: work.coverUrl ?? '',
                 modelFormat: work.modelFormat,
               }}
-              resolveModelSource={resolveAdminWorkModelSource}
+              resolveModelSource={(workId) => queryClient.fetchQuery({
+                queryKey: queryKeys.admin.previewConfig(workId),
+                queryFn: () => resolveAdminWorkModelSource(workId),
+                staleTime: 0,
+              })}
             />
           </div>
 

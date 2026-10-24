@@ -1,4 +1,4 @@
-import { apiRequest } from '../api/http'
+import { apiRequest, isApiError } from '../api/http'
 import { isMocksActive } from '../app/mocksStatus'
 import type { ModelFormat } from '../types/work'
 import type { ModelSource } from './types'
@@ -10,7 +10,7 @@ import type { ModelSource } from './types'
  *   GET /api/works/:id/preview-config        公开端，仅已发布
  *   GET /api/admin/works/:id/preview-config  管理端，草稿/下架也可预览
  * 响应 mode='client' 时返回 source.url/version；服务端确保只有 ready 的资源
- * 才会给出 URL。404 NO_MODEL / 网络失败都显示“尚未配置模型资源”，不伪造成功。
+ * 才会给出 URL。仅 404 NO_MODEL 显示“尚未配置模型资源”；其余请求错误交给调用方处理。
  *
  * DEV 且 MSW 实际启用时仍走本地白名单映射，保持既有开发体验；生产构建不会
  * 包含该动态 import。
@@ -39,9 +39,9 @@ async function fetchPreviewSource(path: string): Promise<ModelSource | null> {
       version: source.version,
       ...(source.name ? { name: source.name } : {}),
     }
-  } catch {
-    // 404 NO_MODEL、网络失败与非法响应都按“未配置”处理，绝不伪造可播放状态。
-    return null
+  } catch (error) {
+    if (isApiError(error) && error.status === 404 && error.code === 'NO_MODEL') return null
+    throw error
   }
 }
 

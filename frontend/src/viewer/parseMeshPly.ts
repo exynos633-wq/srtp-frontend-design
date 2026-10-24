@@ -63,6 +63,7 @@ interface Reader {
 const MAX_HEADER_BYTES = 512 * 1024
 const MAX_VERTICES = 20_000_000
 const MAX_TRIANGLES = 50_000_000
+const MAX_ELEMENT_ROWS = MAX_VERTICES + MAX_TRIANGLES
 const MAX_LIST_ITEMS = 10_000_000
 
 const TYPE_ALIASES: Record<string, ScalarType> = {
@@ -143,7 +144,7 @@ function readHeader(buffer: ArrayBuffer): PlyHeader {
       const parts = line.split(/\s+/)
       if (parts.length !== 3) fail('PLY_HEADER', `element 行不完整：${line}`)
       const count = Number(parts[2])
-      if (!Number.isInteger(count) || count < 0) fail('PLY_HEADER', `element 数量无效：${line}`)
+      if (!Number.isSafeInteger(count) || count < 0) fail('PLY_HEADER', `element 数量无效：${line}`)
       current = { name: parts[1]!, count, properties: [] }
       elements.push(current)
       continue
@@ -174,7 +175,13 @@ function readHeader(buffer: ArrayBuffer): PlyHeader {
   if (vertices[0]!.count > MAX_VERTICES) fail('PLY_FIELDS', '网格顶点数超过查看器上限。')
 
   const names = new Set<string>()
+  let totalRows = 0
   for (const element of elements) {
+    totalRows += element.count
+    if (totalRows > MAX_ELEMENT_ROWS) fail('PLY_FIELDS', 'PLY 元素总记录数超过查看器上限。')
+    if (element.count > 0 && element.properties.length === 0) {
+      fail('PLY_FIELDS', `元素 ${element.name} 有记录但没有属性。`)
+    }
     const seen = new Set<string>()
     for (const property of element.properties) {
       if (seen.has(property.name)) fail('PLY_FIELDS', `元素 ${element.name} 存在重名属性 ${property.name}。`)
@@ -347,7 +354,6 @@ export function parseMeshPly(buffer: ArrayBuffer): ParsedMeshPly {
   let maxX = -Infinity
   let maxY = -Infinity
   let maxZ = -Infinity
-  let maxColor = 0
   const triangleIndices: number[] = []
 
   for (let elementIndex = 0; elementIndex < header.elements.length; elementIndex += 1) {
@@ -386,13 +392,10 @@ export function parseMeshPly(buffer: ArrayBuffer): ParsedMeshPly {
             normals[base + 2] = value
           } else if (property.name === 'red' && rawColors) {
             rawColors[base] = value
-            if (value > maxColor) maxColor = value
           } else if (property.name === 'green' && rawColors) {
             rawColors[base + 1] = value
-            if (value > maxColor) maxColor = value
           } else if (property.name === 'blue' && rawColors) {
             rawColors[base + 2] = value
-            if (value > maxColor) maxColor = value
           }
         }
       }
@@ -442,9 +445,12 @@ export function parseMeshPly(buffer: ArrayBuffer): ParsedMeshPly {
   let colors: Float32Array | null = null
   if (rawColors) {
     colors = new Float32Array(rawColors.length)
-    const divisor = maxColor > 1.5 ? 255 : 1
+    const divisors = colorNames.map((name) => {
+      const property = vertexProps.get(name) as ScalarProperty
+      return property.type === 'uint8' ? 255 : 1
+    })
     for (let index = 0; index < rawColors.length; index += 1) {
-      colors[index] = Math.min(1, Math.max(0, rawColors[index]! / divisor))
+      colors[index] = Math.min(1, Math.max(0, rawColors[index]! / divisors[index % 3]!))
     }
   }
 

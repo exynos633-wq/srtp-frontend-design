@@ -35,7 +35,7 @@ function asciiBuffer(body = ASCII_BODY, header = ASCII_HEADER): ArrayBuffer {
   return new TextEncoder().encode(`${header}\n${body}\n`).buffer
 }
 
-function binaryBuffer(bigEndian = false): ArrayBuffer {
+function binaryBuffer(bigEndian = false, colorValue = 255): ArrayBuffer {
   const header = new TextEncoder().encode(
     [
       'ply',
@@ -61,9 +61,9 @@ function binaryBuffer(bigEndian = false): ArrayBuffer {
   const view = new DataView(buffer)
   let offset = header.byteLength
   const vertices = [
-    [0, 0, 0, 255, 0, 0],
-    [1, 0, 0, 0, 255, 0],
-    [0, 1, 0, 0, 0, 255],
+    [0, 0, 0, colorValue, 0, 0],
+    [1, 0, 0, 0, colorValue, 0],
+    [0, 1, 0, 0, 0, colorValue],
   ]
   for (const [x, y, z, r, g, b] of vertices) {
     view.setFloat32(offset, x!, littleEndian)
@@ -123,6 +123,50 @@ describe('网格 PLY 解析', () => {
       expect(Array.from(parsed.indices)).toEqual([0, 1, 2])
       expect(parsed.colors![0]).toBe(1)
     }
+  })
+
+  it('按 uchar 类型归一化低值颜色，不受其他顶点亮度影响', () => {
+    const darkBody = ASCII_BODY.replaceAll('255', '1')
+    const dark = parseMeshPly(asciiBuffer(darkBody))
+    const bright = parseMeshPly(asciiBuffer(darkBody.replace('1 1 1\n4', '255 255 255\n4')))
+    expect(dark.colors![0]).toBeCloseTo(1 / 255, 7)
+    expect(bright.colors![0]).toBe(dark.colors![0])
+    expect(bright.colors![9]).toBe(1)
+  })
+
+  it.each([false, true])('二进制 bigEndian=%s 的低值 uchar 颜色按类型归一化', (bigEndian) => {
+    const parsed = parseMeshPly(binaryBuffer(bigEndian, 1))
+    expect(parsed.colors![0]).toBeCloseTo(1 / 255, 7)
+    expect(parsed.colors![4]).toBeCloseTo(1 / 255, 7)
+  })
+
+  it('浮点颜色直接使用 0 到 1，不因其他顶点值越界而重新缩放', () => {
+    const header = ASCII_HEADER.replaceAll('property uchar', 'property float')
+    const body = ASCII_BODY.replaceAll('255', '0.5').replace('0.5 0.5 0.5\n4', '2 2 2\n4')
+    const parsed = parseMeshPly(asciiBuffer(body, header))
+    expect(parsed.colors![0]).toBe(0.5)
+    expect(parsed.colors![9]).toBe(1)
+  })
+
+  it.each([1000, 1000000000000])('拒绝有 %s 条记录但无属性的未知元素', (count) => {
+    const header = ASCII_HEADER.replace('element vertex', `element metadata ${count}\nelement vertex`)
+    expectViewerError(() => parseMeshPly(asciiBuffer(ASCII_BODY, header)), 'PLY_FIELDS')
+  })
+
+  it('在读取数据前拒绝超限元素数量与总记录数', () => {
+    for (const metadata of [
+      'element metadata 1000000000000\nproperty uchar value',
+      'element metadata 40000000\nproperty uchar value\nelement extra 40000000\nproperty uchar value',
+    ]) {
+      const header = ASCII_HEADER.replace('element vertex', `${metadata}\nelement vertex`)
+      expectViewerError(() => parseMeshPly(asciiBuffer(ASCII_BODY, header)), 'PLY_FIELDS')
+    }
+  })
+
+  it('仍可跳过带属性的未知元素与零记录元素', () => {
+    const header = ASCII_HEADER.replace('element vertex', 'element empty 0\nelement metadata 1\nproperty uchar value\nelement vertex')
+    const parsed = parseMeshPly(asciiBuffer(`7\n${ASCII_BODY}`, header))
+    expect(parsed.triangleCount).toBe(2)
   })
 
   it('构建可渲染的 Three.js 网格，并保留格式与三角面统计', async () => {
