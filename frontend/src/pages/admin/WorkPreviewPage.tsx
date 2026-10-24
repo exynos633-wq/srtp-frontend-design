@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { getAdminWork } from '../../api/adminWorks'
@@ -33,6 +33,10 @@ export default function WorkPreviewPage() {
     staleTime: 0,
     refetchOnMount: 'always',
   })
+
+  useEffect(() => () => {
+    if (id) void queryClient.cancelQueries({ queryKey: queryKeys.admin.previewConfig(id), exact: true })
+  }, [id, queryClient])
 
   const notFound = !id || (isApiError(error) && error.status === 404)
   const unauthorized = isApiError(error) && error.status === 401
@@ -154,7 +158,7 @@ export default function WorkPreviewPage() {
               }}
               resolveModelSource={(workId) => queryClient.fetchQuery({
                 queryKey: queryKeys.admin.previewConfig(workId),
-                queryFn: () => resolveAdminWorkModelSource(workId),
+                queryFn: ({ signal }) => resolveAdminWorkModelSource(workId, signal),
                 staleTime: 0,
               })}
             />

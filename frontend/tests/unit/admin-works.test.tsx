@@ -284,13 +284,41 @@ describe('P10 授权预览', () => {
     )
     renderAt('/admin/works/work_draft_001/preview')
     fireEvent.click(await screen.findByRole('button', { name: '开始预览' }))
-    expect(await screen.findByText('模型配置暂不可用。')).toBeVisible()
+    await waitFor(() => expect(screen.getByText('模型配置暂不可用。')).toBeVisible())
     expect(screen.queryByTestId('model-viewport-stub')).toBeNull()
     expect(requests).toBe(1)
     fireEvent.click(screen.getByRole('button', { name: '手动重试' }))
     await screen.findByTestId('model-viewport-stub')
     await waitFor(() => expect(screen.getByText('真实查看器测试替身 · 未命名草稿')).toBeVisible())
     expect(requests).toBe(2)
+  })
+
+  it('离开管理预览页会取消正在读取的模型配置，不缓存迟到结果', async () => {
+    await login({ username: 'admin', password: 'admin' })
+    let requestSignal: AbortSignal | undefined
+    let releaseRequest!: () => void
+    const requestGate = new Promise<void>((resolve) => { releaseRequest = resolve })
+    server.use(
+      http.get(/\/api\/admin\/works\/work_draft_001\/preview-config$/, async ({ request }) => {
+        requestSignal = request.signal
+        await requestGate
+        return HttpResponse.json({
+          mode: 'client',
+          source: { kind: 'url', url: '/media/model.glb', version: 'asset_1' },
+        })
+      }),
+    )
+    const { client, router } = renderAt('/admin/works/work_draft_001/preview')
+    fireEvent.click(await screen.findByRole('button', { name: '开始预览' }))
+    await waitFor(() => expect(requestSignal).toBeDefined())
+    try {
+      await act(async () => { await router.navigate('/admin/works') })
+      await waitFor(() => expect(requestSignal?.aborted).toBe(true))
+    } finally {
+      await act(async () => { releaseRequest() })
+    }
+    expect(client.getQueryData(queryKeys.admin.previewConfig('work_draft_001'))).toBeUndefined()
+    expect(client.getQueryData(queryKeys.auth.failure())).toBeUndefined()
   })
 
   it.each([401, 403])('模型配置 %s 时清除管理缓存并撤除观看区', async (status) => {

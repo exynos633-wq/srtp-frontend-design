@@ -59,7 +59,7 @@ describe('预览配置来源适配', () => {
   it('公开端读取作品 preview-config 并返回 URL 来源', async () => {
     api.request.mockResolvedValue(config)
     const source = await resolveWorkModelSource('work_demo_001')
-    expect(api.request).toHaveBeenCalledWith('/works/work_demo_001/preview-config')
+    expect(api.request).toHaveBeenCalledWith('/works/work_demo_001/preview-config', { signal: undefined })
     expect(source).toEqual({
       kind: 'url',
       url: '/api/works/work_demo_001/model?v=asset_1',
@@ -81,6 +81,7 @@ describe('预览配置来源适配', () => {
     const source = await resolveAdminWorkModelSource('work_draft_001')
     expect(api.request).toHaveBeenCalledWith(
       '/admin/works/work_draft_001/preview-config',
+      { signal: undefined },
     )
     expect(source?.kind === 'url' ? source.url : '').toContain('/api/admin/works/')
   })
@@ -106,6 +107,14 @@ describe('预览配置来源适配', () => {
     api.request.mockRejectedValue(error)
     await expect(resolveWorkModelSource('a')).rejects.toBe(error)
     await expect(resolveAdminWorkModelSource('a')).rejects.toBe(error)
+  })
+
+  it('管理端将取消信号传到请求层，并保留 AbortError', async () => {
+    const controller = new AbortController()
+    const error = new DOMException('请求取消', 'AbortError')
+    api.request.mockRejectedValue(error)
+    await expect(resolveAdminWorkModelSource('a', controller.signal)).rejects.toBe(error)
+    expect(api.request).toHaveBeenCalledWith('/admin/works/a/preview-config', { signal: controller.signal })
   })
 
   it('DEV 且 MSW 实际启用时仍使用本地开发适配', async () => {

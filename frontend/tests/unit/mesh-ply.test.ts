@@ -140,6 +140,14 @@ describe('网格 PLY 解析', () => {
     expect(parsed.colors![4]).toBeCloseTo(1 / 255, 7)
   })
 
+  it.each(['ushort', 'uint16', 'uint', 'uint32', 'char', 'int16', 'int32'])(
+    '明确拒绝未支持的 %s 顶点颜色，避免裁剪成白色',
+    (type) => {
+      const header = ASCII_HEADER.replaceAll('property uchar', `property ${type}`)
+      expectViewerError(() => parseMeshPly(asciiBuffer(ASCII_BODY, header)), 'PLY_FIELDS')
+    },
+  )
+
   it('浮点颜色直接使用 0 到 1，不因其他顶点值越界而重新缩放', () => {
     const header = ASCII_HEADER.replaceAll('property uchar', 'property float')
     const body = ASCII_BODY.replaceAll('255', '0.5').replace('0.5 0.5 0.5\n4', '2 2 2\n4')

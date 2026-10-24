@@ -28,9 +28,9 @@ interface PreviewConfigResponse {
   } | null
 }
 
-async function fetchPreviewSource(path: string): Promise<ModelSource | null> {
+async function fetchPreviewSource(path: string, signal?: AbortSignal): Promise<ModelSource | null> {
   try {
-    const config = await apiRequest<PreviewConfigResponse>(path)
+    const config = await apiRequest<PreviewConfigResponse>(path, { signal })
     const source = config?.source
     if (!config || config.mode !== 'client' || !source?.url) return null
     return {
@@ -57,10 +57,11 @@ export async function resolveWorkModelSource(workId: string): Promise<ModelSourc
 /** 管理端预览：草稿与已下架作品也能取到来源。 */
 export async function resolveAdminWorkModelSource(
   workId: string,
+  signal?: AbortSignal,
 ): Promise<ModelSource | null> {
   if (import.meta.env.DEV && isMocksActive()) {
     const { resolveDevModelSource } = await import('../dev/resolveDevModelSource')
     return resolveDevModelSource(workId)
   }
-  return fetchPreviewSource(`/admin/works/${encodeURIComponent(workId)}/preview-config`)
+  return fetchPreviewSource(`/admin/works/${encodeURIComponent(workId)}/preview-config`, signal)
 }

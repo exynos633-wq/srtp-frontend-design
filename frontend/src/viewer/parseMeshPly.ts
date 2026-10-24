@@ -177,8 +177,8 @@ function readHeader(buffer: ArrayBuffer): PlyHeader {
   const names = new Set<string>()
   let totalRows = 0
   for (const element of elements) {
+    if (element.count > MAX_ELEMENT_ROWS - totalRows) fail('PLY_FIELDS', 'PLY 元素总记录数超过查看器上限。')
     totalRows += element.count
-    if (totalRows > MAX_ELEMENT_ROWS) fail('PLY_FIELDS', 'PLY 元素总记录数超过查看器上限。')
     if (element.count > 0 && element.properties.length === 0) {
       fail('PLY_FIELDS', `元素 ${element.name} 有记录但没有属性。`)
     }
@@ -322,6 +322,13 @@ export function parseMeshPly(buffer: ArrayBuffer): ParsedMeshPly {
   for (const name of [...normalNames, ...colorNames]) {
     const property = vertexProps.get(name)
     if (property && property.kind !== 'scalar') fail('PLY_FIELDS', `属性 ${name} 必须是标量。`)
+  }
+
+  for (const name of colorNames) {
+    const property = vertexProps.get(name)
+    if (property?.kind === 'scalar' && !['uint8', 'float32', 'float64'].includes(property.type)) {
+      fail('PLY_FIELDS', `颜色属性 ${name} 仅支持 uchar/uint8 或浮点数。`)
+    }
   }
 
   const faceElement = header.elements[faceIndex]!
