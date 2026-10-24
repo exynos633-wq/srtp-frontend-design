@@ -11,8 +11,6 @@ import {
 } from '../../api/adminWorks'
 import { listCities, listProvinces } from '../../api/dictionary'
 import { isApiError } from '../../api/http'
-import { isUploadSimulationEnabled } from '../../api/mockUploads'
-import { isMocksActive } from '../../app/mocksStatus'
 import { adminWorkInvalidationKeys, publicWorkInvalidationKeys, queryKeys } from '../../api/queryKeys'
 import { UploadField } from '../../components/uploads/UploadField'
 import { Button } from '../../components/ui/Button'
@@ -23,7 +21,7 @@ import { TextareaField } from '../../components/ui/TextareaField'
 import { TextField } from '../../components/ui/TextField'
 import { registerLeaveGuard } from '../../lib/leaveGuard'
 import { classNames } from '../../lib/classNames'
-import { useMockUpload } from '../../lib/useMockUpload'
+import { useAssetUpload } from '../../lib/useMockUpload'
 import { workStatusLabel } from '../../lib/workLabels'
 import {
   baselineFromAdminWork,
@@ -204,21 +202,18 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
   const [actionPending, setActionPending] = useState<'publish' | 'unpublish' | null>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
 
-  const uploadsEnabled = isUploadSimulationEnabled(import.meta.env.DEV, isMocksActive())
-  const modelUpload = useMockUpload('model')
-  const coverUpload = useMockUpload('cover')
+  const modelUpload = useAssetUpload('model')
+  const coverUpload = useAssetUpload('cover')
   const status = work?.status ?? 'draft'
   const hasUnsavedSelection = modelUpload.selection !== null || coverUpload.selection !== null
   const hasUnsettledSelection = modelUpload.hasUnsettled || coverUpload.hasUnsettled
   const formLocked = saving || actionPending !== null
-  const resourceEditingDisabled = formLocked || !uploadsEnabled || status === 'published'
-  const resourceDisabledReason = !uploadsEnabled
-    ? '当前环境未开放上传；正式上传协议与校验规则待确认。'
-    : status === 'published'
-      ? '已发布作品不可直接替换模型或封面，请先下架。'
-      : formLocked
-        ? '正在处理，完成后再选择文件。'
-        : undefined
+  const resourceEditingDisabled = formLocked || status === 'published'
+  const resourceDisabledReason = status === 'published'
+    ? '已发布作品不可直接替换模型或封面，请先下架。'
+    : formLocked
+      ? '正在处理，完成后再选择文件。'
+      : undefined
 
   // 通过 MutationCache 的 admin mutationKey 走现有 401/403 清理与 AuthGate 通知。
   const saveMutation = useMutation({
@@ -724,9 +719,9 @@ function WorkForm({ workId, initialWork }: WorkFormProps) {
 
           <section className={styles.resourcePanel} aria-label="模型与封面资源">
             <p className={styles.protocolNote}>
-              {uploadsEnabled
-                ? '以下为仅开发环境的上传模拟：只传文件名、大小与文件类型等说明信息，不读取或传输文件内容。正式上传接口、类型细则、大小上限、分片/续传与校验规则均待确认。'
-                : '上传功能尚未开放；正式上传协议、类型细则与校验规则待确认。'}
+              {modelUpload.mode === 'simulated'
+                ? '开发模拟上传：只传文件名、大小与类型，不读取或传输文件内容。正式环境会通过 multipart 上传真实文件并由服务端校验。'
+                : '模型支持 .glb / .ply（PLY 需为高斯泼溅），上限 512 MB；封面支持 WebP / PNG / JPEG，上限 10 MB。文件上传后由服务端校验，ready 后才能保存绑定。'}
             </p>
 
             <UploadField

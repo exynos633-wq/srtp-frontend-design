@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { getAdminWork } from '../../api/adminWorks'
 import { isApiError } from '../../api/http'
@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusMessage } from '../../components/ui/StatusMessage'
 import { PreviewViewer } from '../../components/works/PreviewViewer'
-import { resolveWorkModelSource } from '../../viewer/workModelSource'
+import { resolveAdminWorkModelSource } from '../../viewer/workModelSource'
 import {
   modelFormatLabel,
   workDisplayName,
@@ -19,6 +19,7 @@ import styles from './WorkPreviewPage.module.css'
 
 export default function WorkPreviewPage() {
   const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
   const titleRef = useRef<HTMLHeadingElement>(null)
   const stateHeadingRef = useRef<HTMLHeadingElement>(null)
   const focusedTitleRef = useRef<string | null>(null)
@@ -32,6 +33,10 @@ export default function WorkPreviewPage() {
     staleTime: 0,
     refetchOnMount: 'always',
   })
+
+  useEffect(() => () => {
+    if (id) void queryClient.cancelQueries({ queryKey: queryKeys.admin.previewConfig(id), exact: true })
+  }, [id, queryClient])
 
   const notFound = !id || (isApiError(error) && error.status === 404)
   const unauthorized = isApiError(error) && error.status === 401
@@ -151,7 +156,11 @@ export default function WorkPreviewPage() {
                 coverUrl: work.coverUrl ?? '',
                 modelFormat: work.modelFormat,
               }}
-              resolveModelSource={resolveWorkModelSource}
+              resolveModelSource={(workId) => queryClient.fetchQuery({
+                queryKey: queryKeys.admin.previewConfig(workId),
+                queryFn: ({ signal }) => resolveAdminWorkModelSource(workId, signal),
+                staleTime: 0,
+              })}
             />
           </div>
 

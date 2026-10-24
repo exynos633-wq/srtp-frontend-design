@@ -29,6 +29,7 @@ export const queryKeys = {
     all: ['admin'] as const,
     works: () => [...queryKeys.admin.all, 'works'] as const,
     work: (id: string) => [...queryKeys.admin.all, 'work', id] as const,
+    previewConfig: (id: string) => [...queryKeys.admin.work(id), 'preview-config'] as const,
   },
 } as const
 

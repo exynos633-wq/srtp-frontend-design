@@ -2,7 +2,7 @@
 
 本目录是站内独立的原生 Three.js 渲染核心，不经过首页的 React Three Fiber 地球。
 一个查看器实例只有一个可见 canvas、一个 `requestAnimationFrame` 循环和一个相机控制器；
-GLB 与 3DGS 只在上层适配器中分流。查看器只有在用户显式开始预览后才动态加载，
+GLB、3DGS PLY 与网格 PLY 只在上层适配器中分流。查看器只有在用户显式开始预览后才动态加载，
 模型字节、`File`、相机和视频流都不进入 TanStack Query。
 
 ## 运行与入口
@@ -108,7 +108,7 @@ viewer.setBloom(true, 0.25)
 viewer.setBloomStrength(0.35)
 viewer.setUniformTone(true)
 viewer.setSplatScale(1.2)          // 单 splat 尺度，不是 Object3D.scale
-viewer.setSoftLight(true, 1.2)     // 仅 GLB；强度范围 0–2
+viewer.setSoftLight(true, 1.2)     // GLB／网格 PLY；强度范围 0–2
 viewer.setEmission(true, 1.6)      // 仅原有发光材质；统一色调下不可见
 viewer.setFlySpeed(1.2)            // 相对速度
 viewer.setWalkSpeed(0.6)
@@ -170,6 +170,22 @@ type ModelViewerEvent =
   文件后缀和作品元数据不参与该判断。可用 `sourceUp` 覆盖，再用 `orientation` 的
   X/Y/Z 各 +90° 组合纠正；均为根节点变换，不改文件、不重新解析。
 
+### 网格 PLY
+
+- 接受 `ascii 1.0`、`binary_little_endian 1.0`、`binary_big_endian 1.0`；按头部属性逐项解析，
+  不依赖顶点顺序。
+- 必需顶点 `x/y/z`；可选 `nx/ny/nz` 与 `red/green/blue`（uchar 或 0–1 float）。
+- 必需面元素及整数索引列表（`vertex_indices` 或 `vertex_index`）；四边形及以上按扇形拆成三角面。
+- 支持 char/uchar/short/ushort/int/uint/float/double 标量；索引必须是整数类型。
+- 拒绝无面、少于 3 顶点、越界索引、非整数索引、截断或带尾随字节的文件；上限 2,000 万顶点／
+  5,000 万三角面／1,000 万列表项。
+- 用 Three `BufferGeometry` + `MeshStandardMaterial`（双面）渲染，可选顶点色；不读取 UV、贴图、
+  材质扩展、morph/skin 或点云。
+- 网格 PLY 仍按 PLY 默认 Z-up；柔和补光、统一色调与 Bloom 可用，高斯单 splat 尺度禁用；
+  网格材质没有发光贴图入口，因此“原有发光材质”只对 GLB 可用。
+- **上传契约仍只接受 GLB 与高斯 PLY**；网格 PLY 目前通过 DEV 测试台 `File` 或宿主提供的
+  `preview-config` URL 进入查看器，不能经现有后台上传。
+
 ## 坐标、相机与控制
 
 - 显示坐标系固定右手 Z-up，`camera.up = (0,0,1)`；不改 Three 全局默认 up，也不影响首页地球。
@@ -194,8 +210,8 @@ type ModelViewerEvent =
 - Bloom 默认关闭，开启初始强度 0.25；Three `EffectComposer` + `UnrealBloomPass`，
   Spark 与 GLB 都走同一最终合成。
 - Gaussian “单 splat 尺度”只改 Spark 每个 splat 的 scales uniform，不缩放 Object3D。
-- GLB 不提供尺寸缩放。
-- “柔和补光”只对 GLB 加不可见场景光，保留原材质；强度 0–2，可调；高斯禁用。
+- GLB 与网格 PLY 不提供尺寸缩放。
+- “柔和补光”只对 GLB／网格 PLY 加不可见场景光，保留原材质；强度 0–2，可调；高斯禁用。
 - “原有发光材质”只增强模型已有的 emissive/emissiveMap；强度 0.1–3，可调；
   高斯或没有发光材质时禁用并说明。统一色调使用无发光替代材质时也禁用，切回原色保留设置。
 - 飞行/步行相对速度可调，按模型尺度和 dt 生效，不重解析。
@@ -219,7 +235,8 @@ type ModelViewerEvent =
 ## 释放边界
 
 `dispose()`/`end()` 会取消加载代际与 AbortController、停止 RAF 和事件监听、移除模型、
-释放 GLTF 几何/材质/贴图（包括去重后 `ImageBitmap.close()`）、Spark `SplatMesh`/`SparkRenderer`、
+释放 GLTF 几何/材质/贴图（包括去重后 `ImageBitmap.close()`）、网格 PLY 的 BufferGeometry/材质、
+Spark `SplatMesh`/`SparkRenderer`、
 EffectComposer target、MediaRecorder 与 MediaStream track。迟到解析结果在加入场景前检查代际，
 过期立即释放；GLB 边界必须有限且非退化，否则报 `INVALID_BOUNDS`。读取流在魔数/格式早退时
 `cancel()` 未读部分，不继续后台下载。
@@ -239,14 +256,17 @@ X/Y 输入可换行，不横向溢出。工具栏和面板使用既有实色 tok
 - 丘陵 3DGS PLY（264,843,708 B，1,067,912 splats，SH degree 3）：真实 Spark 加载与渲染通过；
   有效包围盒是直径约 101.8 的球壳，从外部看是灰球。**不能声称它正确展示建筑/地形**；
   资产字段和渲染结果已分别核对，不把球形全景采集说成建筑模型。
+- 网格 PLY：只用合成 ASCII 四边形（313 B，2 三角面）在 DEV 测试台验证；未使用真实网格资产，
+  因此不声称真实建筑网格、材质或大型文件性能已验收。
 
 性能：Chrome 155 / Apple M5 / ANGLE Metal / DPR 上限 1.5，交互与参数采样 p50≈16.7ms、
 p95≈16.7–16.8ms；首轮编译有 0.1–0.5s 长帧。30fps 的 p95≤50ms 只是预算目标，不是对所有
 设备的承诺。录制停止后 `MediaStreamTrack.readyState` 全部为 `ended`；35 秒成片已在真实 `<video>` 中播放并在 1s/17s/34s seek 解码。Safari、Firefox、手机真机、触屏多指真机和弱网尚未实测。
 
-最终完整验证：233 条单测、108 条 Chrome E2E 全部通过（`/tmp/srtp-model-viewer-artifacts/` 下的
-`typecheck.log`、`lint.log`、`unit.log`、`build.log`、`e2e-final.log`，均保留真实 exit code）。
-E2E 含新增的真实浏览器回归：显式 Walk 配置在方向纠正后旧 ground/eye/start/area 与 trusted 全部作废，
+最终验证：25 文件、252 条单测通过；网格 PLY 专项 Chrome E2E 1 条通过。完整 Chrome E2E 套件
+本轮不是全绿（108 条中 85 通过、13 失败、10 未跑，失败含本机缺 `ffprobe`、冷启动超时与
+`丘陵.ply` 被重命名为 `丘陵(1).ply`），不能把旧的全绿记录套用到本轮。
+E2E 含真实浏览器回归：显式 Walk 配置在方向纠正后旧 ground/eye/start/area 与 trusted 全部作废，
 重新确认的起点不被旧矩形夹取；未改变方向时可信区域仍约束起点。最终 `metrics-final.json` 的 10 轮
 GLB/3DGS 交替释放：几何 1、纹理 3/5 稳定，worker 创建/终止差恒为 1（不随轮次增长），GC 后堆
 GLB 约 134.6→136.5 MB、3DGS 约 406.2→395.4 MB，无逐轮线性增长证据，不写成“已无泄漏”。

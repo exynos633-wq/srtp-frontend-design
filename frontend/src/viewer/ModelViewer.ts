@@ -824,7 +824,7 @@ export class ModelViewer {
     this.boundsCenter.set(...bounds.center)
     const size = new THREE.Vector3(...bounds.size)
     this.boundsRadius = Math.max(size.length() / 2, 1e-5)
-    this.setupLights(model.format === 'glb')
+    this.setupLights(model.format === 'glb' || model.format === 'mesh-ply')
     this.setupCamera(model)
 
     this.model.setSplatScale(this.display.splatScale)
@@ -897,7 +897,7 @@ export class ModelViewer {
     this.directionInvalidatedWalk = true
     this.walkSetup = null
     this.setupGroundAndEye()
-    this.setupLights(model.format === 'glb')
+    this.setupLights(model.format === 'glb' || model.format === 'mesh-ply')
     this.applyLights()
     this.setupCamera(model, false)
     this.syncOrbitFromCamera()

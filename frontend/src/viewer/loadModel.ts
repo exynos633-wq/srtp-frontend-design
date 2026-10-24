@@ -4,6 +4,7 @@ import { SplatFileType, SplatMesh, dyno } from '@sparkjsdev/spark'
 import { ViewerError } from './errors'
 import { parseGlbContainer } from './parseGlb'
 import { parsePly, type ParsedPly } from './parsePly'
+import { isMeshPly, parseMeshPly, type ParsedMeshPly } from './parseMeshPly'
 import { assertFiniteBounds } from './viewerMath'
 import type { BoundsInfo, ModelInfo } from './types'
 
@@ -26,7 +27,7 @@ export interface SplatLook {
 }
 
 export interface LoadedModel {
-  format: 'glb' | 'gaussian-ply'
+  format: 'glb' | 'gaussian-ply' | 'mesh-ply'
   object: THREE.Object3D
   bounds: BoundsInfo
   info: ModelInfo
@@ -238,6 +239,86 @@ export async function buildModel(buffer: ArrayBuffer, options: BuildOptions): Pr
 
   options.onPhase('parse')
   throwIfAborted()
+
+  if (isPly && isMeshPly(buffer)) {
+    let parsed: ParsedMeshPly
+    try {
+      parsed = parseMeshPly(buffer)
+    } catch (error) {
+      throw error instanceof ViewerError ? error : new ViewerError('PLY_FIELDS', undefined, error)
+    }
+    throwIfAborted()
+
+    options.onPhase('initialize')
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3))
+    if (parsed.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3))
+    if (parsed.colors) geometry.setAttribute('color', new THREE.BufferAttribute(parsed.colors, 3))
+    geometry.setIndex(new THREE.BufferAttribute(parsed.indices, 1))
+    if (!parsed.normals) geometry.computeVertexNormals()
+    geometry.computeBoundingBox()
+    geometry.computeBoundingSphere()
+
+    const material = new THREE.MeshStandardMaterial({
+      color: parsed.colors ? 0xffffff : 0xb7c6c8,
+      vertexColors: Boolean(parsed.colors),
+      roughness: 0.84,
+      metalness: 0.04,
+      side: THREE.DoubleSide,
+    })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.name = options.sourceName
+
+    let bounds: BoundsInfo
+    let look: GlbLook
+    try {
+      bounds = boundsFor(mesh)
+      look = createGlbLook(mesh)
+    } catch (error) {
+      disposeObject3D(mesh)
+      if (error instanceof ViewerError) throw error
+      throw new ViewerError('PARSE', error instanceof Error ? error.message : undefined, error)
+    }
+
+    const info: ModelInfo = {
+      format: 'mesh-ply',
+      sourceName: options.sourceName,
+      bytes: buffer.byteLength,
+      // PLY 没有统一方向元数据；默认按 Z-up 展示，可在查看器中手动纠正。
+      sourceUp: 'z',
+      orientation: { x: 0, y: 0, z: 0 },
+      bounds,
+      splats: null,
+      triangles: parsed.triangleCount,
+      materials: 1,
+      textures: 0,
+      shDegree: null,
+      hasEmissive: false,
+    }
+
+    return {
+      format: 'mesh-ply',
+      object: mesh,
+      bounds,
+      info,
+      glbLook: look,
+      splatLook: null,
+      dispose: () => {
+        for (const entry of look.meshes) entry.mesh.material = entry.original
+        look.toneMaterial.dispose()
+        disposeObject3D(mesh)
+      },
+      recomputeBounds: () => boundsFor(mesh),
+      setSplatScale: () => undefined,
+      setSplatTone: () => undefined,
+      setGlbTone: (enabled) => {
+        for (const entry of look.meshes) {
+          entry.mesh.material = enabled ? look.toneMaterial : entry.original
+        }
+      },
+      setEmissive: () => undefined,
+    }
+  }
 
   if (isPly) {
     let parsed: ParsedPly
