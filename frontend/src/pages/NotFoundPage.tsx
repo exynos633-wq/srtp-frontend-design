@@ -1,10 +1,12 @@
 import { Link } from 'react-router'
+import { ExhibitionLight } from '../components/ui/ExhibitionLight'
 import styles from './NotFoundPage.module.css'
 
 export default function NotFoundPage() {
   return (
     <section className={styles.page} aria-labelledby="not-found-title">
-      <p className={styles.code}>404</p>
+      <div className={styles.light} aria-hidden="true"><ExhibitionLight /></div>
+      <p className={styles.code}>404 / OUT OF COLLECTION</p>
       <h1 className={styles.title} id="not-found-title">
         页面不存在
       </h1>

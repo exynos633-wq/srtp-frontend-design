@@ -1,9 +1,87 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="演示封面占位">
-  <rect width="800" height="500" fill="#20272b" />
-  <g fill="none" stroke="#2a3e4b" stroke-width="2">
-    <rect x="0.5" y="0.5" width="799" height="499" />
+  <title>演示封面占位</title>
+  <desc>墨黑图纸风格建筑轴测线稿占位封面，非真实作品封面。</desc>
+
+  <defs>
+    <pattern id="grid-minor" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#16171a" stroke-width="1" />
+    </pattern>
+    <pattern id="grid-major" width="200" height="200" patternUnits="userSpaceOnUse">
+      <path d="M200 0H0V200" fill="none" stroke="#1f2022" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <!-- 墨黑底 + 细网格 -->
+  <rect width="800" height="500" fill="#090a0b" />
+  <rect width="800" height="500" fill="url(#grid-minor)" />
+  <rect width="800" height="500" fill="url(#grid-major)" />
+
+  <!-- 图纸边框与裁切索引线（纸白，少量） -->
+  <rect x="16" y="16" width="768" height="468" fill="none" stroke="#2c2d2a" stroke-width="1" />
+  <g fill="none" stroke="#ede8df" stroke-width="1">
+    <path d="M16 4V16M4 16H16" />
+    <path d="M784 4V16M784 16H796" />
+    <path d="M16 484V496M4 484H16" />
+    <path d="M784 484V496M784 484H796" />
   </g>
-  <text x="400" y="258" fill="#879ca8" font-family="system-ui, sans-serif" font-size="28" text-anchor="middle">
-    演示封面占位
-  </text>
+
+  <!-- 建筑轴测线稿 -->
+  <g fill="none" transform="translate(-44 0)">
+    <!-- 场地/台基 -->
+    <path d="M470 170 L667.454 284 L521.961 368 L324.507 254 Z" stroke="#41423d" stroke-width="1" />
+    <path d="M324.507 254V262 L521.961 376 L667.454 292V284" stroke="#41423d" stroke-width="1" />
+    <!-- 被遮挡的底部轮廓（虚线索引） -->
+    <path d="M470 184 L643.205 284M470 184 L348.756 254" stroke="#3a3b36" stroke-width="1" stroke-dasharray="5 5" />
+    <!-- 左右立面 -->
+    <path d="M348.756 254 L521.961 354V234 L348.756 134 Z" stroke="#6b6c65" stroke-width="1.3" />
+    <path d="M643.205 284 L521.961 354V234 L643.205 164 Z" stroke="#6b6c65" stroke-width="1.3" />
+    <!-- 立面竖挺与横梁（玻璃分格） -->
+    <g stroke="#41423d" stroke-width="1">
+      <path d="M612.894 301.5V181.5M582.583 319V199M552.272 336.5V216.5" />
+      <path d="M392.057 279V159M435.359 304V184M478.66 329V209" />
+      <path d="M643.205 224L521.961 294L348.756 194" />
+    </g>
+    <!-- 入口门洞 -->
+    <path d="M418.038 294 L452.679 314V266 L418.038 246 Z" stroke="#41423d" stroke-width="1" />
+    <path d="M435.359 304V256" stroke="#41423d" stroke-width="1" />
+    <!-- 角柱 -->
+    <g stroke="#6b6c65" stroke-width="2">
+      <path d="M638.705 284V178M647.705 284V178" />
+      <path d="M517.461 354V248M526.461 354V248" />
+      <path d="M344.256 254V148M353.256 254V148" />
+    </g>
+    <!-- 屋面板顶面分格 -->
+    <g stroke="#2f302c" stroke-width="1">
+      <path d="M429.585 87.333 L602.79 187.333M389.171 110.667 L562.376 210.667" />
+      <path d="M527.735 97.333 L406.491 167.333M585.47 130.667 L464.226 200.667" />
+    </g>
+    <!-- 屋面板与檐口厚度 -->
+    <g stroke="#6b6c65">
+      <path d="M470 64 L643.205 164 L521.961 234 L348.756 134 Z" stroke-width="1.4" />
+      <path d="M643.205 164 L521.961 234V248 L643.205 178 Z" stroke-width="1.2" />
+      <path d="M348.756 134 L521.961 234V248 L348.756 148 Z" stroke-width="1.2" />
+    </g>
+  </g>
+
+  <!-- 轴测方向索引（朱砂仅用于索引线/标注） -->
+  <g>
+    <path d="M700 108 L734.641 128M700 108 L665.359 128" fill="none" stroke="#6b6c65" stroke-width="1.2" />
+    <path d="M700 108V68" fill="none" stroke="#c8472d" stroke-width="1.5" />
+    <g font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC','Source Han Sans SC',system-ui,-apple-system,'Segoe UI',sans-serif" font-size="12" fill="#ede8df">
+      <text x="740" y="134">X</text>
+      <text x="660" y="134" text-anchor="end">Y</text>
+      <text x="700" y="60" text-anchor="middle">Z</text>
+    </g>
+    <text x="760" y="44" text-anchor="end" fill="#c8472d" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC','Source Han Sans SC',system-ui,-apple-system,'Segoe UI',sans-serif" font-size="12" letter-spacing="3">轴测示意 · AXON 1:100</text>
+  </g>
+
+  <!-- 标题栏：明确标注占位，不伪装作品封面 -->
+  <g>
+    <rect x="40" y="392" width="720" height="72" fill="#0c0d0e" stroke="#2c2d2a" stroke-width="1" />
+    <path d="M40 392V464" stroke="#c8472d" stroke-width="3" />
+    <path d="M540 404V452" stroke="#c8472d" stroke-width="1" />
+    <text x="60" y="440" fill="#ede8df" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC','Source Han Sans SC',system-ui,-apple-system,'Segoe UI',sans-serif" font-size="42" font-weight="600" letter-spacing="4">演示封面占位</text>
+    <text x="740" y="418" text-anchor="end" fill="#ede8df" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC','Source Han Sans SC',system-ui,-apple-system,'Segoe UI',sans-serif" font-size="20" letter-spacing="2">非真实作品封面</text>
+    <text x="740" y="444" text-anchor="end" fill="#c8472d" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC','Source Han Sans SC',system-ui,-apple-system,'Segoe UI',sans-serif" font-size="12" letter-spacing="2">MOCK PLACEHOLDER</text>
+  </g>
 </svg>

@@ -55,6 +55,11 @@ interface ScreenPoint {
   front: boolean
 }
 
+/** 开场相机参数；2026-10-22 实机校准为更远的飞入与更大的转向。 */
+const OPENING_INTRO_DISTANCE = 1.45
+const OPENING_DURATION = 1.65
+const POINT_REVEAL_DELAY = 0.65
+
 /** 模块内存只保存浏览状态，不保存 Three 对象；离开页面后场景本身被卸载。 */
 const memory: HomeMemory = {
   visited: false,
@@ -103,14 +108,14 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
   const startView = memory.visited ? memory.view : reducedMotion ? INITIAL_VIEW : OPENING_VIEW
   const viewRef = useRef<EngineView>({
     ...startView,
-    introDistance: memory.visited || reducedMotion ? 1 : 1.12,
+    introDistance: memory.visited || reducedMotion ? 1 : OPENING_INTRO_DISTANCE,
   })
   const [opening, setOpening] = useState(() => !memory.visited && !reducedMotion)
   const [bubbleCityId, setBubbleCityId] = useState<string | null>(null)
   const [bubbleMode, setBubbleMode] = useState<CityBubbleMode>('hover')
   const [bubbleClosing, setBubbleClosing] = useState(false)
   const [bubbleSize, setBubbleSize] = useState({ width: 0, height: 0 })
-  const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0, viewportHeight: 0 })
   const [pendingCityName, setPendingCityName] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const bubbleCity = cities.find((city) => city.id === bubbleCityId) ?? null
@@ -515,14 +520,14 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
         timeline.fromTo(
           nav,
           { y: -12, autoAlpha: 0.55 },
-          { y: 0, autoAlpha: 1, duration: 0.42, ease: 'power2.out' },
+          { y: 0, autoAlpha: 1, duration: 0.5, ease: 'power2.out' },
           0,
         )
       }
       timeline.fromTo(
         proxy,
-        { introDistance: 1.12 },
-        { introDistance: 1, duration: 1.25, ease: 'power2.inOut', onUpdate: syncView },
+        { introDistance: OPENING_INTRO_DISTANCE },
+        { introDistance: 1, duration: OPENING_DURATION, ease: 'power2.inOut', onUpdate: syncView },
         0.08,
       )
       timeline.to(
@@ -530,7 +535,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
         {
           longitude: INITIAL_VIEW.longitude,
           latitude: INITIAL_VIEW.latitude,
-          duration: 1.25,
+          duration: OPENING_DURATION,
           ease: 'power2.inOut',
           onUpdate: syncView,
         },
@@ -562,9 +567,9 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
         { opacity: 0 },
         {
           opacity: 1,
-          duration: 0.45,
-          stagger: 0.08,
-          delay: 0.35,
+          duration: 0.55,
+          stagger: 0.09,
+          delay: POINT_REVEAL_DELAY,
           ease: 'power2.out',
           clearProps: 'opacity',
         },
@@ -577,12 +582,15 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
     const stage = stageRef.current
     if (!stage) return
     const update = () =>
-      setStageSize({ width: stage.clientWidth, height: stage.clientHeight })
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight, viewportHeight: window.innerHeight })
     update()
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(update)
-    observer.observe(stage)
-    return () => observer.disconnect()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(stage)
+    window.addEventListener('resize', update)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [])
 
   useEffect(() => {
@@ -802,7 +810,9 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
     typeof window === 'undefined' ? 800 : Math.max(480, window.innerHeight)
   const bubbleMaxHeight = Math.max(
     180,
-    (stageSize.height || fallbackHeight) - (mobile ? 112 : 120),
+    // 短屏首页允许纵向滚动，气泡仍按可见视口预算保留内部滚动。
+    Math.min(stageSize.height || fallbackHeight,
+      (stageSize.viewportHeight || fallbackHeight) - (mobile ? 100 : 0)) - (mobile ? 112 : 120),
   )
   const viewportArea =
     typeof window === 'undefined' ? 0 : window.innerWidth * window.innerHeight
@@ -829,6 +839,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
       ref={stageRef}
       className={styles.stage}
       data-globe-stage="true"
+      data-cursor-label="拖动"
       data-opening={opening ? 'true' : 'false'}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       data-selected-city={selectedCityId ?? ''}
@@ -875,7 +886,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
 
       {bubbleCity && (
         <svg className={styles.connector} aria-hidden="true">
-          <line ref={connectorRef} className={styles.connectorLine} />
+          <line ref={connectorRef} className={styles.connectorLine} pathLength={1} />
         </svg>
       )}
 
@@ -1058,6 +1069,7 @@ function SceneSync({
     if (!point?.front || !bubbleCityId || bubble.width < 1 || bubble.height < 1) {
       layer.style.visibility = 'hidden'
       line.style.visibility = 'hidden'
+      line.style.strokeDashoffset = '1'
       return
     }
 
@@ -1073,12 +1085,14 @@ function SceneSync({
     if (!placement) {
       layer.style.visibility = 'hidden'
       line.style.visibility = 'hidden'
+      line.style.strokeDashoffset = '1'
       return
     }
 
     layer.style.transform = `translate3d(${placement.left}px, ${placement.top}px, 0)`
     layer.style.visibility = 'visible'
     line.style.visibility = 'visible'
+    line.style.strokeDashoffset = '0'
     line.setAttribute('x1', String(point.x))
     line.setAttribute('y1', String(point.y))
     line.setAttribute('x2', String(placement.lineX))

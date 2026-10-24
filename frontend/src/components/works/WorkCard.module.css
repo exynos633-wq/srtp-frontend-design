@@ -1,143 +1,148 @@
-.item {
-  display: flex;
-  min-width: 0;
-}
-
+/* v3 展板：图片 + 图下展签；倾斜与多层视差保留，彩色边缘光改为中性展陈光。 */
+.item { display: flex; min-width: 0; }
 .card {
   position: relative;
   display: flex;
-  flex-direction: column;
   width: 100%;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-panel);
-  background: var(--color-panel);
-  overflow: hidden;
-  transition:
-    transform var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+  min-width: 0;
+  perspective: 1200px;
+  color: inherit;
 }
-
-/* 固定 16:10 画面区：图片加载不推动标题（规范 §5.1）。 */
+.surface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  transform-style: preserve-3d;
+  transition: transform 620ms var(--ease-exhibit);
+}
 .media {
   position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 16 / 10;
+  border: 1px solid var(--color-line);
   background: var(--color-image-bed);
   overflow: hidden;
+  transition: border-color 280ms ease, box-shadow 360ms ease;
 }
-
+.media::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background:
+    radial-gradient(420px circle at var(--pointer-x, 50%) var(--pointer-y, 0%), rgb(237 232 223 / 13%), transparent 58%),
+    linear-gradient(to top, rgb(9 10 11 / 38%), transparent 32%);
+  opacity: 0;
+  transition: opacity 360ms ease;
+}
 .image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: transform var(--dur-base) var(--ease-out);
+  opacity: 0;
+  transform: translate3d(0, var(--parallax, 0px), 0) scale(1.02);
+  transition: opacity 620ms ease, transform 760ms var(--ease-exhibit);
+  will-change: transform;
 }
-
-.fallback {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-  text-align: center;
-}
-
-/* 中性“不可用”标记，不画建筑轮廓，不冒充封面或模型。 */
-.fallbackMark {
-  position: relative;
-  width: 32px;
-  height: 24px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-control);
-}
-
-.fallbackMark::after {
-  position: absolute;
-  inset: 4px;
-  border-top: 1px solid var(--color-line);
-  content: '';
-  transform: rotate(-18deg) translateY(7px);
-}
-
+.media[data-cover-ready='true'] .image { opacity: 1; }
 .body {
-  display: grid;
-  gap: var(--space-1);
-  min-height: 76px;
-  padding: var(--space-4);
+  display: flex;
+  transition: transform 620ms var(--ease-exhibit);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 2px;
 }
-
+.caption { display: grid; gap: 6px; min-width: 0; }
+.titleRow { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .title {
-  color: var(--color-text);
-  font-size: var(--text-heading);
-  line-height: var(--leading-heading);
-  font-weight: var(--weight-heading);
+  margin: 0;
+  color: var(--color-paper);
+  font: 400 23px/1.32 var(--font-display);
   overflow-wrap: anywhere;
 }
-
+.ordinal {
+  flex: none;
+  padding-top: 4px;
+  color: var(--color-accent-text);
+  font: 10px/1.6 var(--font-latin);
+  letter-spacing: 0.14em;
+}
 .city {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
+  font-size: 12px;
+  line-height: 1.6;
 }
-
-/* 指针悬停才抬起；触屏不保留悬停态，改用按压反馈（动效设计 §2）。 */
-@media (hover: hover) and (pointer: fine) {
-  .card:hover {
-    border-color: var(--color-border-hover);
-    background: var(--color-surface-hover);
-    box-shadow: 0 12px 32px var(--color-shadow);
-    transform: translateY(-3px);
-  }
-
-  .card:hover .image {
-    transform: scale(1.025);
-  }
-}
-
-.card:active {
-  border-color: var(--color-border-hover);
-  transform: scale(0.995);
-}
-
-/* 冷银短角标只标当前选中，不沿建筑轮廓描线（规范 §2.1、§5.1）。 */
-.media[data-selected='true']::before,
-.media[data-selected='true']::after {
-  position: absolute;
-  inset: var(--space-2);
+.city::before {
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent-line);
   content: '';
-  pointer-events: none;
 }
-
-.media[data-selected='true']::before {
-  background:
-    linear-gradient(var(--color-silver), var(--color-silver)) left top / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) left top / 1px 8px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right top / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right top / 1px 8px no-repeat;
+.arrow {
+  display: grid;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  font-size: 17px;
+  transition: background 250ms ease, color 250ms ease, border-color 250ms ease, rotate 420ms var(--ease-exhibit);
 }
+.fallback { display: grid; justify-items: center; gap: 12px; padding: 24px; color: var(--color-text-muted); font-size: 13px; text-align: center; }
+.fallbackMark { width: 32px; height: 24px; border: 1px solid var(--color-line); }
+.media[data-selected='true'] { border-color: var(--color-paper); }
+.card:focus-visible { outline: none; box-shadow: none; }
+.card:focus-visible .surface { outline: 2px solid var(--color-focus); outline-offset: 5px; }
+.card:focus-visible .arrow { background: var(--color-paper); color: var(--color-bg); }
 
-.media[data-selected='true']::after {
-  background:
-    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) left bottom / 1px 8px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 8px 1px no-repeat,
-    linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 1px 8px no-repeat;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card,
-  .image {
-    transition: none;
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .media {
+    border-color: var(--color-border-hover);
+    box-shadow: 0 18px 48px rgb(0 0 0 / 34%);
   }
-
-  .card:hover,
-  .card:active,
+  .card:hover .media::after { opacity: 1; }
+  .card:hover .arrow { background: var(--color-paper); color: var(--color-bg); border-color: var(--color-paper); rotate: 45deg; }
+  .card:hover .title { text-decoration: underline; text-decoration-color: var(--color-accent-line); text-decoration-thickness: 1px; text-underline-offset: 6px; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover .surface {
+    transform:
+      rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg))
+      translate3d(calc(var(--shift-x, 0px) * 0.18), calc(var(--shift-y, 0px) * 0.18 - 6px), 0);
+  }
   .card:hover .image {
-    transform: none;
+    transform:
+      translate3d(calc(var(--shift-x, 0px) * -0.5), calc(var(--shift-y, 0px) * -0.5 + var(--parallax, 0px)), 0)
+      scale(1.045);
   }
+  .card:hover .body { transform: translate3d(calc(var(--shift-x, 0px) * 0.18), 0, 0); }
+}
+.card[data-opening='true'] .surface,
+.card[data-opening='true'] .image,
+.card[data-opening='true'] .body { transform: none; transition: none; }
+
+@media (max-width: 767px) {
+  .surface { gap: 12px; }
+  .title { font-size: 21px; }
+  .arrow { width: 32px; height: 32px; border-color: var(--color-line); color: var(--color-text-secondary); }
+  .card:active .media { border-color: var(--color-accent-line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface, .media, .media::after, .image, .arrow, .body { transition: none; }
+  .image { opacity: 1; }
 }

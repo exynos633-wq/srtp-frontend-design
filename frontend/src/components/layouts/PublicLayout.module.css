@@ -1,10 +1,14 @@
 .shell {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background:
+    linear-gradient(180deg, #0b0c0d 0%, var(--color-bg) 38%, #08090a 100%);
 }
 
 .main {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
@@ -25,7 +29,8 @@
 }
 
 .footer {
-  padding: var(--space-4) var(--page-padding);
+  position: relative;
+  padding: var(--space-6) var(--page-inset);
   border-top: 1px solid var(--color-line);
   color: var(--color-text-muted);
   font-size: var(--text-meta);

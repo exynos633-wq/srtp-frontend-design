@@ -5,11 +5,10 @@
   max-width: calc(100vw - 48px);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid rgb(119 166 167 / 42%);
-  border-radius: 12px;
-  background: rgb(18 29 38 / 88%);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  background: rgb(19 20 21 / 96%);
   box-shadow: 0 24px 64px rgb(0 0 0 / 42%);
-  backdrop-filter: blur(12px);
   color: var(--color-text);
   pointer-events: auto;
 }
@@ -17,7 +16,6 @@
 .bubble[data-solid='true'] {
   background: var(--color-panel);
   border-color: var(--color-line);
-  backdrop-filter: none;
 }
 
 .bubble[data-closing='true'] {
@@ -168,7 +166,7 @@
 }
 
 .workHint {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
@@ -213,7 +211,7 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
   text-decoration: underline;

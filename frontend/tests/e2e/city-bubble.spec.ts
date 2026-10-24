@@ -154,7 +154,9 @@ test('手机气泡在点位附近且不越界，列表滚动不拖动地球', as
   expect(box!.x + box!.width).toBeLessThanOrEqual((stageBox?.x ?? 0) + (stageBox?.width ?? 390) - 16 + 1)
   expect(box!.y).toBeGreaterThanOrEqual(stageBox?.y ?? 0)
   expect(box!.y + box!.height).toBeLessThanOrEqual((stageBox?.y ?? 0) + (stageBox?.height ?? 844) - 16 + 1)
-  expect(box!.y).toBeGreaterThan(pointBox!.y)
+  // v2 球心偏下，气泡可在点位上方或下方，但应保持邻近。
+  const pointY = pointBox!.y + pointBox!.height / 2
+  expect(Math.min(Math.abs(box!.y - pointY), Math.abs(box!.y + box!.height - pointY))).toBeLessThan(48)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
 
   const list = bubble(page).locator('ul')

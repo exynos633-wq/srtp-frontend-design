@@ -129,8 +129,8 @@ export function CityBubble({
       }
       gsap.fromTo(
         section,
-        { opacity: 0, y: 8 },
-        { opacity: 1, y: 0, duration: 0.34, ease: 'power2.out' },
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.38, ease: 'power3.out' },
       )
     },
     { scope: sectionRef, dependencies: [city.id, reducedMotion] },

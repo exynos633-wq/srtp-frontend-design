@@ -1,14 +1,15 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { listPublicWorks } from '../api/works'
 import { queryKeys } from '../api/queryKeys'
 import { Button } from '../components/ui/Button'
-import { PageHeader } from '../components/ui/PageHeader'
+import { ExhibitionLight } from '../components/ui/ExhibitionLight'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { WorkCard, type WorkCardOpenSource } from '../components/works/WorkCard'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
+import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
 import {
   rememberCoverSource,
   rememberDirectoryReturn,
@@ -37,6 +38,7 @@ function DirectorySkeleton() {
 export default function WorksPage() {
   const pageRef = useRef<HTMLDivElement>(null)
   const restoredRef = useRef(false)
+  const reducedMotion = usePrefersReducedMotion()
 
   const { data, isPending, isError, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.works.list(),
@@ -83,7 +85,7 @@ export default function WorksPage() {
 
       if (typeof IntersectionObserver === 'undefined') return
 
-      gsap.set(cards, { opacity: 0, y: 18 })
+      gsap.set(cards, { opacity: 0, y: 24, clipPath: 'inset(0 0 12% 0)' })
 
       const rows = new Map<number, HTMLElement[]>()
       for (const card of cards) {
@@ -104,11 +106,12 @@ export default function WorksPage() {
             gsap.to(row, {
               opacity: 1,
               y: 0,
-              duration: 0.52,
-              ease: 'power2.out',
-              stagger: 0.06,
+              clipPath: 'inset(0 0 0% 0)',
+              duration: 0.62,
+              ease: 'power3.out',
+              stagger: 0.07,
               overwrite: true,
-              onComplete: () => gsap.set(row, { clearProps: 'opacity,transform' }),
+              onComplete: () => gsap.set(row, { clearProps: 'opacity,transform,clipPath' }),
             })
           }
         },
@@ -127,7 +130,7 @@ export default function WorksPage() {
         if (!motionQuery.matches) return
         observer.disconnect()
         gsap.killTweensOf(cards)
-        gsap.set(cards, { clearProps: 'opacity,transform' })
+        gsap.set(cards, { clearProps: 'opacity,transform,clipPath' })
       }
       motionQuery.addEventListener('change', showAll)
 
@@ -135,22 +138,67 @@ export default function WorksPage() {
         observer.disconnect()
         motionQuery.removeEventListener('change', showAll)
         gsap.killTweensOf(cards)
-        gsap.set(cards, { clearProps: 'opacity,transform' })
+        gsap.set(cards, { clearProps: 'opacity,transform,clipPath' })
       }
     },
     { scope: pageRef, dependencies: [works.length] },
   )
+
+  // 滚动视差只写 CSS 变量，不移动卡片本身，避免影响 Flip 起点矩形与点击命中。
+  useEffect(() => {
+    if (works.length === 0 || reducedMotion) return
+    const root = pageRef.current
+    if (!root) return
+    let frame = 0
+    const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-work-card] a'))
+    const update = () => {
+      frame = 0
+      const viewport = window.innerHeight
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect()
+        if (rect.bottom < -120 || rect.top > viewport + 120) {
+          card.style.setProperty('--parallax', '0px')
+          continue
+        }
+        const offset = Math.max(-16, Math.min(16, ((viewport / 2 - (rect.top + rect.height / 2)) / viewport) * 34))
+        card.style.setProperty('--parallax', `${offset.toFixed(2)}px`)
+      }
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    update()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+      for (const card of cards) card.style.removeProperty('--parallax')
+    }
+  }, [works.length, reducedMotion])
 
   const errorMessage =
     error instanceof Error ? error.message : '读取作品列表失败，请稍后手动重试。'
 
   return (
     <div className={styles.page} ref={pageRef}>
-      <PageHeader
-        eyebrow="公开目录"
-        title="全部作品"
-        description="按发布时间排序，一次展示全部已发布作品。城市选填，未设置城市不影响查看。"
-      />
+      <header className={styles.hero}>
+        <ExhibitionLight />
+        <div className={styles.heroCopy}>
+          <p className={styles.eyebrow}>THE ARCHITECTURAL COLLECTION</p>
+          <h1 className={styles.title}>全部作品<span aria-hidden="true">。</span></h1>
+          <p className={styles.description}>在形态与空间之间，发现建筑的另一面。</p>
+        </div>
+        <p className={styles.collectionNote}>
+          <strong>{isPending ? '—' : String(works.length).padStart(2, '0')}</strong>
+          作品索引 / COLLECTION
+        </p>
+      </header>
+      <div className={styles.directoryBar}>
+        <span>公开目录</span>
+        <span>{isPending ? '读取作品中' : `${works.length} 件作品`}<span className={styles.divider}>/</span>按发布时间排序</span>
+      </div>
 
       {isPending ? (
         <div className={styles.state} aria-busy="true">
@@ -191,7 +239,7 @@ export default function WorksPage() {
 
       {works.length > 0 ? (
         <ul className={styles.grid} aria-label="已发布作品">
-          {works.map((work) => (
+          {works.map((work, index) => (
             <WorkCard
               key={work.id}
               workId={work.id}
@@ -200,6 +248,7 @@ export default function WorksPage() {
               cityName={work.city?.name ?? null}
               coverUrl={work.coverUrl}
               onOpen={handleOpen}
+              ordinal={index + 1}
             />
           ))}
         </ul>

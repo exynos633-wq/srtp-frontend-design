@@ -24,10 +24,10 @@ export const INITIAL_VIEW: GlobeView = {
   zoom: 1,
 }
 
-/** 开场从稍微拉远、偏西的视角靠近中国。 */
+/** 开场从更远、偏西南的视角靠近中国；2026-10-22 按观感校准拉大运镜幅度。 */
 export const OPENING_VIEW: GlobeView = {
-  longitude: 95,
-  latitude: 28,
+  longitude: 78,
+  latitude: 20,
   zoom: 1,
 }
 
@@ -110,14 +110,11 @@ export function nearestFrontPoint<T extends { x: number; y: number; front: boole
 }
 
 /**
- * 规范中的构图直径：
- * - 手机：390 宽对应 405，其他宽度等比；
- * - 桌面：760，并受可用宽高约束；
- * - 中间：可用宽 95%、高 90%。
+ * v2 展陈构图：桌面留出左侧标题，手机上方留出介绍与入口。
  */
 export function globeDiameterForViewport(width: number, height: number): number {
-  if (width < 768) return Math.min((width * 405) / 390, height * 0.9)
-  if (width < 1024) return Math.min(width * 0.95, height * 0.9)
+  if (width < 768) return Math.min(width * 0.94, height * 0.56)
+  if (width < 1024) return Math.min(width * 0.6, height * 0.72)
   return Math.min(760, width * 0.54, height * 0.94)
 }
 
@@ -135,13 +132,13 @@ export function cameraDistanceForDiameter(
   return clamp(distance, 2.2, 24)
 }
 
-/** 画面偏移：桌面球心在 45% 宽，手机在 45% 高。 */
+/** 与可见标题错开：桌面偏右，手机偏下。 */
 export function globeViewOffset(
   width: number,
   height: number,
 ): { x: number; y: number; horizontal: number; vertical: number } {
-  const horizontal = width < 768 ? 0.5 : 0.45
-  const vertical = width < 768 ? 0.45 : 0.5
+  const horizontal = width < 768 ? 0.5 : 0.69
+  const vertical = width < 768 ? 0.64 : 0.54
   return {
     x: (0.5 - horizontal) * width,
     y: (0.5 - vertical) * height,

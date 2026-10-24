@@ -16,7 +16,7 @@
 
 .eyebrow {
   margin: 0 0 var(--space-1);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-family: var(--font-mono);
   font-size: var(--text-meta);
   line-height: var(--leading-meta);

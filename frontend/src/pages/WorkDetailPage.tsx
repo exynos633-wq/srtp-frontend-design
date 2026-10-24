@@ -159,7 +159,14 @@ function WorkDetailContent({ id }: { id?: string }) {
 
       {!notFound && displayedWork ? (
         <div className={styles.layout}>
-          <div className={styles.viewerColumn}>
+          <header className={styles.infoHeader} data-detail-layer>
+            <p className={styles.eyebrow}>THE ARCHITECTURAL COLLECTION / 空间档案</p>
+            <h1 className={styles.title} ref={titleRef} tabIndex={-1}>
+              {displayedWork.name}
+            </h1>
+            <p className={styles.city}><span className={styles.cityDot} aria-hidden="true" />{displayedWork.city?.name ?? '未设置城市'}</p>
+          </header>
+          <div className={styles.viewerColumn} data-exhibition-viewer>
             <PreviewViewer
               key={displayedWork.id}
               work={displayedWork}
@@ -171,19 +178,6 @@ function WorkDetailContent({ id }: { id?: string }) {
           </div>
 
           <aside className={styles.info} aria-label="作品信息">
-            <header className={styles.infoHeader} data-detail-layer>
-              <h1 className={styles.title} ref={titleRef} tabIndex={-1}>
-                {displayedWork.name}
-              </h1>
-              <p className={styles.city}>{displayedWork.city?.name ?? '未设置城市'}</p>
-              <p className={styles.likePlaceholder}>
-                <span className={styles.likeIcon} aria-hidden="true">
-                  ♡
-                </span>
-                作品点赞 · 预留
-              </p>
-            </header>
-
             <section className={styles.section} data-detail-layer>
               <h2 className={styles.sectionTitle}>建筑介绍</h2>
               <p className={styles.paragraph}>{displayedWork.description}</p>
@@ -196,11 +190,28 @@ function WorkDetailContent({ id }: { id?: string }) {
               </section>
             ) : null}
 
+            <section className={styles.section} data-detail-layer>
+              <h2 className={styles.sectionTitle}>作品信息</h2>
+              <dl className={styles.metaList}>
+                <div className={styles.metaRow}>
+                  <dt className={styles.metaLabel}>模型格式</dt>
+                  <dd className={styles.metaValue}>
+                    {displayedWork.modelFormat === 'gaussian-ply' ? '3DGS 高斯 PLY' : 'glTF 2.0 GLB'}
+                  </dd>
+                </div>
+                <div className={styles.metaRow}>
+                  <dt className={styles.metaLabel}>观看方式</dt>
+                  <dd className={styles.metaValue}>点击开始后客户端实时渲染</dd>
+                </div>
+              </dl>
+            </section>
+
             <section className={classNames(styles.section, styles.commentSection)} data-detail-layer>
               <h2 className={styles.sectionTitle}>评论 · 预留</h2>
               <p className={styles.placeholderText}>
                 公开评论将在后续版本提供；当前不接受提交，也不展示模拟评论。
               </p>
+              <p className={styles.likePlaceholder}>作品点赞 · 预留</p>
             </section>
           </aside>
         </div>

@@ -1,0 +1,57 @@
+.light {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cool,
+.warm {
+  position: absolute;
+  top: -45%;
+  width: 65%;
+  height: 125%;
+  border-radius: 50%;
+  filter: blur(50px);
+  transform-origin: top center;
+  animation: light-arrive 1.6s var(--ease-exhibit) both;
+}
+
+.cool {
+  right: -8%;
+  background: radial-gradient(ellipse, rgb(237 232 223 / 8%), transparent 66%);
+  transform: rotate(-32deg);
+}
+
+.warm {
+  left: -24%;
+  background: radial-gradient(ellipse, rgb(237 232 223 / 5%), transparent 64%);
+  transform: rotate(32deg);
+  animation-delay: 160ms;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image: linear-gradient(rgb(237 232 223 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(237 232 223 / 7%) 1px, transparent 1px);
+  background-size: 112px 112px;
+  mask-image: linear-gradient(transparent, #000 60%, transparent);
+}
+
+@keyframes light-arrive {
+  from { opacity: 0; scale: 0.8; }
+  to { opacity: 1; scale: 1; }
+}
+
+@media (max-width: 767px) {
+  .cool,
+  .warm { filter: blur(28px); }
+  .grid { background-size: 64px 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cool,
+  .warm { animation: none; }
+}

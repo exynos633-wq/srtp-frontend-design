@@ -1,0 +1,69 @@
+/* v3：指针展陈光与伴随环。只在精细指针且非减少动态时由组件挂载。 */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms var(--ease-exhibit);
+}
+
+.layer[data-visible='true'] {
+  opacity: 1;
+}
+
+.glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(237 232 223 / 8%), transparent 64%);
+  will-change: transform;
+}
+
+.ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgb(237 232 223 / 42%);
+  border-radius: 50%;
+  transition:
+    width 240ms var(--ease-exhibit),
+    height 240ms var(--ease-exhibit),
+    border-color 240ms ease,
+    background-color 240ms ease;
+  will-change: transform;
+}
+
+.label {
+  color: var(--color-paper);
+  font: 9px/1 var(--font-latin);
+  letter-spacing: 0.16em;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  white-space: nowrap;
+}
+
+.layer[data-cursor='true'] .ring {
+  width: 56px;
+  height: 56px;
+  border-color: rgb(237 232 223 / 88%);
+  background: rgb(9 10 11 / 32%);
+}
+
+.layer[data-cursor='true'] .label {
+  opacity: 1;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .layer {
+    display: none;
+  }
+}

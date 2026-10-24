@@ -7,8 +7,8 @@
   cursor: grab;
   outline: none;
   background:
-    radial-gradient(circle at 45% 50%, rgb(13 29 39 / 92%) 0 24%, rgb(13 29 39 / 0%) 58%),
-    radial-gradient(circle at 45% 50%, rgb(8 13 18 / 0%) 34%, rgb(8 13 18 / 82%) 78%);
+    radial-gradient(circle at 45% 50%, rgb(24 25 26 / 78%) 0 24%, rgb(24 25 26 / 0%) 58%),
+    radial-gradient(circle at 45% 50%, rgb(9 10 11 / 0%) 34%, rgb(9 10 11 / 82%) 78%);
 }
 
 .stage:active {
@@ -38,9 +38,9 @@
   pointer-events: none;
   background: radial-gradient(
     ellipse at 45% 50%,
-    rgb(8 13 18 / 0%) 48%,
-    rgb(8 13 18 / 42%) 84%,
-    rgb(8 13 18 / 68%) 100%
+    rgb(9 10 11 / 0%) 48%,
+    rgb(9 10 11 / 42%) 84%,
+    rgb(9 10 11 / 68%) 100%
   );
 }
 
@@ -64,10 +64,13 @@
 
 .connectorLine {
   visibility: hidden;
-  stroke: var(--color-accent);
+  stroke: var(--color-accent-text);
   stroke-width: 1;
   stroke-linecap: round;
-  opacity: 0.58;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.62;
+  transition: stroke-dashoffset 480ms var(--ease-exhibit);
 }
 
 .bubbleLayer {
@@ -118,36 +121,55 @@
 }
 
 .dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-accent-line);
   box-shadow:
-    0 0 0 4px rgb(84 200 193 / 14%),
-    0 0 14px rgb(84 200 193 / 42%);
+    0 0 0 4px rgb(237 232 223 / 10%),
+    0 0 14px rgb(237 232 223 / 22%);
   transition:
-    transform 180ms var(--ease-out),
-    box-shadow 180ms var(--ease-out);
+    transform 200ms var(--ease-exhibit),
+    box-shadow 200ms var(--ease-exhibit);
+}
+
+.dot::after {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid rgb(237 232 223 / 42%);
+  border-radius: 50%;
+  content: '';
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 220ms ease, transform 240ms var(--ease-exhibit);
 }
 
 .point[aria-pressed='true'] .dot,
 .point[data-open='true'] .dot {
-  transform: scale(1.35);
+  transform: scale(1.4);
   box-shadow:
-    0 0 0 6px rgb(84 200 193 / 20%),
-    0 0 20px rgb(84 200 193 / 58%);
+    0 0 0 6px rgb(237 232 223 / 14%),
+    0 0 20px rgb(237 232 223 / 30%);
+}
+
+.point[aria-pressed='true'] .dot::after,
+.point[data-open='true'] .dot::after,
+.point:hover .dot::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .point:hover .dot {
-    transform: scale(1.22);
+    transform: scale(1.32);
   }
 }
 
 .hint {
   position: absolute;
   bottom: 28px;
-  left: 32px;
+  left: var(--page-inset);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
@@ -156,17 +178,16 @@
   max-width: calc(100% - 64px);
   padding: 8px 12px;
   border: 1px solid var(--color-line);
-  border-radius: 999px;
-  background: rgb(8 13 18 / 62%);
+  border-radius: var(--radius-control);
+  background: rgb(9 10 11 / 78%);
   color: var(--color-text-secondary);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
   pointer-events: none;
-  backdrop-filter: blur(10px);
 }
 
 .hintCity {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 500;
 }
 
@@ -189,16 +210,16 @@
 @media (max-width: 767px) {
   .stage {
     background:
-      radial-gradient(circle at 50% 42%, rgb(13 29 39 / 92%) 0 22%, rgb(13 29 39 / 0%) 58%),
-      radial-gradient(circle at 50% 42%, rgb(8 13 18 / 0%) 30%, rgb(8 13 18 / 86%) 78%);
+      radial-gradient(circle at 50% 42%, rgb(24 25 26 / 78%) 0 22%, rgb(24 25 26 / 0%) 58%),
+      radial-gradient(circle at 50% 42%, rgb(9 10 11 / 0%) 30%, rgb(9 10 11 / 86%) 78%);
   }
 
   .vignette {
     background: radial-gradient(
       ellipse at 50% 42%,
-      rgb(8 13 18 / 0%) 46%,
-      rgb(8 13 18 / 48%) 86%,
-      rgb(8 13 18 / 72%) 100%
+      rgb(9 10 11 / 0%) 46%,
+      rgb(9 10 11 / 48%) 86%,
+      rgb(9 10 11 / 72%) 100%
     );
   }
 
@@ -228,4 +249,17 @@
   .dot {
     transition: none;
   }
+}
+
+/* 展陈灯光集中于新的球心，不遮挡城市投影层。 */
+.stage {
+  background: radial-gradient(ellipse at 69% 54%, rgb(24 25 26 / 62%), transparent 48%), #090a0b;
+}
+.vignette {
+  background: radial-gradient(ellipse at 69% 54%, transparent 35%, rgb(9 10 11 / 62%) 85%);
+}
+@media (max-width: 767px) {
+  .stage { background: radial-gradient(ellipse at 50% 64%, rgb(24 25 26 / 62%), transparent 55%), #090a0b; }
+  .vignette { background: radial-gradient(ellipse at 50% 64%, transparent 30%, rgb(9 10 11 / 50%) 85%); }
+  .hint { bottom: 94px; }
 }

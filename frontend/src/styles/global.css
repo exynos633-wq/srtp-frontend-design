@@ -71,6 +71,12 @@ textarea {
     0 0 0 4px var(--color-focus);
 }
 
+/* 程序化聚焦的非交互标题只用于读屏定位，不显示输入框式焦点环；交互控件仍保留焦点。 */
+:where(h1, h2, h3)[tabindex='-1']:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 /* 不支持 :focus-visible 时保留系统焦点框，避免无焦点提示。 */
 @supports not selector(:focus-visible) {
   :where(a, button, input, select, textarea, [tabindex]):focus {
