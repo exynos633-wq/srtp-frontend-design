@@ -1,5 +1,7 @@
 # 客户端模型查看器
 
+2026-10-29：公开端与管理端现在解析完整 preview-config；`mode: remote` 使用 `RemoteModelViewer` 接 WebRTC 视频与控制，复用 `ModelViewport` 工具栏，失败后重新校验并自动降级本目录的本地渲染器。`mode: client` 继续兼容旧后端／DEV Mock。协议与节点接入要求见 [GPU 规范](../../../工程设计/14_GPU远程渲染对接规范.md)，验证边界见 [实施记录](../../../工程设计/15_GPU前端实施记录.md)。
+
 本目录是站内独立的原生 Three.js 渲染核心，不经过首页的 React Three Fiber 地球。
 一个查看器实例只有一个可见 canvas、一个 `requestAnimationFrame` 循环和一个相机控制器；
 GLB、3DGS PLY 与网格 PLY 只在上层适配器中分流。查看器只有在用户显式开始预览后才动态加载，

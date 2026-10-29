@@ -9,7 +9,7 @@ import { isApiError } from '../api/http'
 import { Button } from '../components/ui/Button'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { PreviewViewer } from '../components/works/PreviewViewer'
-import { resolveWorkModelSource } from '../viewer/workModelSource'
+import { resolvePreviewConfig } from '../viewer/workModelSource'
 import { classNames } from '../lib/classNames'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
 import type { PublicWork } from '../types/work'
@@ -166,7 +166,7 @@ function WorkDetailContent({ id }: { id?: string }) {
               onEntered={handleEntered}
               onPreviewStarted={handlePreviewStarted}
               ensureAvailable={ensurePreviewAvailable}
-              resolveModelSource={resolveWorkModelSource}
+              resolvePreviewConfig={resolvePreviewConfig}
             />
           </div>
 

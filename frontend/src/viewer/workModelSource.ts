@@ -2,6 +2,8 @@ import { apiRequest, isApiError } from '../api/http'
 import { isMocksActive } from '../app/mocksStatus'
 import type { ModelFormat } from '../types/work'
 import type { ModelSource } from './types'
+import type { ModelViewConfig } from './types'
+import type { PreviewConfig } from '../api/preview'
 
 /**
  * 作品模型来源适配点。
@@ -19,6 +21,8 @@ import type { ModelSource } from './types'
 interface PreviewConfigResponse {
   workId: string
   mode: 'client' | 'remote'
+  version?: string
+  view?: ModelViewConfig | null
   source?: {
     kind: 'url'
     url: string
@@ -26,6 +30,36 @@ interface PreviewConfigResponse {
     name?: string
     format?: ModelFormat
   } | null
+}
+
+export async function resolvePreviewConfig(
+  workId: string, admin = false, signal?: AbortSignal,
+): Promise<PreviewConfig> {
+  if (import.meta.env.DEV && isMocksActive()) {
+    const { resolveDevModelSource } = await import('../dev/resolveDevModelSource')
+    return { workId, mode: 'client', source: await resolveDevModelSource(workId), view: {} }
+  }
+  let config: PreviewConfigResponse
+  try {
+    config = await apiRequest<PreviewConfigResponse>(
+      `${admin ? '/admin' : ''}/works/${encodeURIComponent(workId)}/preview-config`, { signal },
+    )
+  } catch (error) {
+    if (isApiError(error) && error.status === 404 && error.code === 'NO_MODEL') {
+      return { workId, mode: 'client', source: null, view: {} }
+    }
+    throw error
+  }
+  if (config.workId !== workId || !['client', 'remote'].includes(config.mode)) {
+    throw new Error('预览配置与当前作品不一致。')
+  }
+  const source = config.source?.url && config.source.version
+    ? { kind: 'url' as const, url: config.source.url, version: config.source.version, name: config.source.name }
+    : null
+  const view = Object.fromEntries(Object.entries(config.view ?? {}).filter(([, value]) => value != null)) as ModelViewConfig
+  const version = config.version ?? source?.version
+  if (config.mode === 'remote' && !version) throw new Error('远程配置缺少资源版本。')
+  return { workId, mode: config.mode, source, view, version }
 }
 
 async function fetchPreviewSource(path: string, signal?: AbortSignal): Promise<ModelSource | null> {

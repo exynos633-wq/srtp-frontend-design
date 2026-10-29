@@ -199,6 +199,7 @@ export interface RecordingState {
 }
 
 export type ModelViewerEvent =
+  | { type: 'notice'; message: string }
   | { type: 'phase'; phase: ViewerPhase; detail?: string }
   | { type: 'progress'; progress: ReadProgress }
   | { type: 'ready'; info: ModelInfo }

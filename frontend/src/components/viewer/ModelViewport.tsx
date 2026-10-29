@@ -4,6 +4,9 @@ import { classNames } from '../../lib/classNames'
 import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
 import { toViewerErrorInfo } from '../../viewer/errors'
 import { ModelViewer } from '../../viewer/ModelViewer'
+import { RemoteModelViewer } from '../../viewer/RemoteModelViewer'
+import type { ViewerController } from '../../viewer/controller'
+import type { RemotePreview } from '../../api/preview'
 import type {
   ModelInfo,
   ModelSource,
@@ -58,6 +61,8 @@ const PHASE_LABEL: Record<ViewerPhase, string> = {
 
 export interface ModelViewportProps {
   source: ModelSource | null
+  remote?: RemotePreview | null
+  onRemoteFailure?: (error: unknown) => void
   modelName: string
   modelFormat?: ModelFormat | null
   viewConfig?: ModelViewConfig
@@ -103,6 +108,8 @@ function formatMetric(value: number | null | undefined, digits = 1): string {
  */
 export function ModelViewport({
   source,
+  remote,
+  onRemoteFailure,
   modelName,
   modelFormat,
   viewConfig,
@@ -121,11 +128,14 @@ export function ModelViewport({
 }: ModelViewportProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const viewerRef = useRef<ModelViewer | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const viewerRef = useRef<ViewerController | null>(null)
+  const remoteFailureRef = useRef(onRemoteFailure)
   const callbacksRef = useRef({ onPhase, onReady, onError, onEnd })
   const messageTimerRef = useRef<number | null>(null)
 
   const [phase, setPhase] = useState<ViewerPhase>('idle')
+  const [phaseDetail, setPhaseDetail] = useState('')
   const [info, setInfo] = useState<ModelInfo | null>(null)
   const [error, setError] = useState<ViewerErrorInfo | null>(null)
   const [progress, setProgress] = useState<{ loaded: number; total: number | null; percent: number | null } | null>(null)
@@ -177,8 +187,9 @@ export function ModelViewport({
     (!info && (modelFormat === 'glb' || modelFormat === 'mesh-ply'))
 
   useEffect(() => {
+    remoteFailureRef.current = onRemoteFailure
     callbacksRef.current = { onPhase, onReady, onError, onEnd }
-  }, [onEnd, onError, onPhase, onReady])
+  }, [onEnd, onError, onPhase, onReady, onRemoteFailure])
 
   const notify = useCallback((text: string) => {
     setMessage(text)
@@ -192,8 +203,12 @@ export function ModelViewport({
   const handleEvent = useCallback(
     (event: ModelViewerEvent) => {
       switch (event.type) {
+        case 'notice':
+          notify(event.message)
+          break
         case 'phase':
           setPhase(event.phase)
+          setPhaseDetail(event.detail ?? '')
           callbacksRef.current.onPhase?.(event.phase)
           if (event.phase === 'read' || event.phase === 'parse' || event.phase === 'initialize') {
             setError(null)
@@ -216,7 +231,7 @@ export function ModelViewport({
           setError(null)
           setProgress(null)
           callbacksRef.current.onReady?.(event.info)
-          notify('模型已加载，可用鼠标或触控操作。')
+          notify('模型已就绪，可用鼠标或触控操作。')
           break
         case 'error':
           setError(event.error)
@@ -263,18 +278,26 @@ export function ModelViewport({
 
   useEffect(() => {
     const canvas = canvasRef.current
+    const video = videoRef.current
     const root = rootRef.current
-    if (!canvas || !root) return
-    let viewer: ModelViewer
+    if (!root || (!remote && !canvas) || (remote && !video)) return
+    let viewer: ViewerController
     try {
-      viewer = new ModelViewer(canvas, root, {
+      const options = {
         autoRotate: initialAutoRotate,
         reducedMotion,
         dprCap,
         lowPower: effectiveLowPower,
-        onEvent: (event) => handleEventRef.current(event),
-      })
+        onEvent: (event: ModelViewerEvent) => handleEventRef.current(event),
+      }
+      viewer = remote
+        ? new RemoteModelViewer(video!, root, remote, options, (failure) => remoteFailureRef.current?.(failure))
+        : new ModelViewer(canvas!, root, options)
     } catch (failure) {
+      if (remote) {
+        window.queueMicrotask(() => remoteFailureRef.current?.(failure))
+        return
+      }
       const info = toViewerErrorInfo(failure)
       window.queueMicrotask(() => {
         setError(info)
@@ -284,7 +307,7 @@ export function ModelViewport({
       return
     }
     viewerRef.current = viewer
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && viewer instanceof ModelViewer) {
       ;(window as unknown as { __srtpModelViewer?: ModelViewer }).__srtpModelViewer = viewer
     }
     const onFullscreenChange = () => setFullscreen(document.fullscreenElement === root)
@@ -557,7 +580,7 @@ export function ModelViewport({
   const emissiveAvailable = canControlEmission(hasEmissive, uniformTone)
   const progressPercent = progress?.percent ?? null
   const sourceLabel =
-    source?.kind === 'file' ? source.file.name : source?.kind === 'url' ? source.name ?? source.url : '未配置'
+    remote ? info?.sourceName ?? modelName : source?.kind === 'file' ? source.file.name : source?.kind === 'url' ? source.name ?? source.url : '未配置'
   const recordingLabel = recording.recording
     ? `录制中 ${formatSeconds(recording.elapsedMs)} · 剩余 ${formatSeconds(recording.remainingMs)}`
     : recordingResult
@@ -574,13 +597,21 @@ export function ModelViewport({
       data-viewer-settings-open={settingsOpen ? 'true' : 'false'}
     >
       <div className={styles.stage}>
-        <canvas
+        {remote ? <video
+          ref={videoRef}
+          className={styles.canvas}
+          style={{ objectFit: 'fill' }}
+          muted playsInline autoPlay
+          tabIndex={0}
+          aria-label={`${modelName} 远程模型画面。鼠标旋转、滚轮缩放，WASD 漫游，F 复位。`}
+          data-viewer-video
+        /> : <canvas
           ref={canvasRef}
           className={styles.canvas}
           tabIndex={0}
           aria-label={`${modelName} 三维模型画布。方向键不移动；WASD 在飞行或步行模式移动，F 复位视角，鼠标左键旋转、中键平移、滚轮缩放。`}
           data-viewer-canvas
-        />
+        />}
 
         <div className={styles.topBar}>
           <div className={styles.toolbar} role="toolbar" aria-label="模型查看工具栏">
@@ -651,6 +682,7 @@ export function ModelViewport({
                 type="button"
                 className={classNames(styles.iconButton, settingsOpen && styles.iconButtonActive)}
                 aria-label="显示设置"
+                disabled={Boolean(remote) && !ready}
                 aria-pressed={settingsOpen}
                 title="显示设置"
                 onClick={() => {
@@ -734,7 +766,7 @@ export function ModelViewport({
           <div className={styles.statusOverlay} role="status" aria-live="polite">
             <div className={styles.statusCard}>
               <span className={styles.spinner} aria-hidden="true" />
-              <p className={styles.statusTitle}>{PHASE_LABEL[phase]}</p>
+              <p className={styles.statusTitle}>{remote ? phaseDetail || '正在连接 GPU 并准备画面' : PHASE_LABEL[phase]}</p>
               {progress ? (
                 <>
                   <p className={styles.statusText}>

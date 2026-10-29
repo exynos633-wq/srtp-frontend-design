@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusMessage } from '../../components/ui/StatusMessage'
 import { PreviewViewer } from '../../components/works/PreviewViewer'
-import { resolveAdminWorkModelSource } from '../../viewer/workModelSource'
+import { resolvePreviewConfig } from '../../viewer/workModelSource'
 import {
   modelFormatLabel,
   workDisplayName,
@@ -156,9 +156,10 @@ export default function WorkPreviewPage() {
                 coverUrl: work.coverUrl ?? '',
                 modelFormat: work.modelFormat,
               }}
-              resolveModelSource={(workId) => queryClient.fetchQuery({
+              adminPreview
+              resolvePreviewConfig={(workId) => queryClient.fetchQuery({
                 queryKey: queryKeys.admin.previewConfig(workId),
-                queryFn: ({ signal }) => resolveAdminWorkModelSource(workId, signal),
+                queryFn: ({ signal }) => resolvePreviewConfig(workId, true, signal),
                 staleTime: 0,
               })}
             />
