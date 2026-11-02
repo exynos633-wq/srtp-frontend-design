@@ -4,10 +4,13 @@
  * 约定：
  * - 颜色、字号、间距、圆角、层级与动效时长只在此处定义，页面和组件通过 var() 引用。
  * - 断点无法用 CSS 变量表达，统一使用 768 / 1024 / 1280（见各组件注释）。
- * - 字体尚未入库（规范 §3、§10）：这里只声明回退栈，不得声称已安装正式字体。
+ * - 展示字体已随本次 UI 优化入库；正文仍使用回退栈。
  */
 
 :root {
+  --font-display: "Display Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --public-nav-height: 64px;
+  --public-mobile-height: 92px;
   /* —— 色彩（规范 §2.1） —— */
   --color-bg: #080d12;
   --color-panel: #121d26;

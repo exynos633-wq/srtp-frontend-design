@@ -170,3 +170,22 @@
     grid-template-columns: minmax(0, 1fr) minmax(300px, 30%);
   }
 }
+.title {
+  font-size: clamp(26px, 2.5vw, 34px);
+  line-height: 1.3;
+  font-weight: 600;
+}
+.sectionTitle {
+  font-size: 18px;
+  line-height: 26px;
+}
+.info {
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+@media (max-width: 1023px) {
+  .info {
+    border-width: 1px 0 0;
+  }
+}

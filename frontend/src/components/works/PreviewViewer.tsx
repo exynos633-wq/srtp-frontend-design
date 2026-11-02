@@ -38,6 +38,7 @@ export interface PreviewWork {
   id: string
   name: string
   coverUrl: string
+  modelingNote?: string | null
   modelFormat?: ModelFormat | null
 }
 
@@ -594,6 +595,8 @@ export function PreviewViewer({
                   remote={remote}
                   onRemoteFailure={handleRemoteFailure}
                   modelName={work.name}
+                  modelingNote={work.modelingNote}
+                  zoomed={zoomOpen}
                   modelFormat={work.modelFormat}
                   viewConfig={previewConfig ?? resolvedConfig}
                   dprCap={dprCap}
@@ -602,11 +605,13 @@ export function PreviewViewer({
                   onError={handleViewerError}
                   onRetry={beginPreview}
                   onEnd={endPreview}
-                  onZoom={status === 'interactive' ? openZoom : undefined}
+                  onZoom={status === 'interactive' ? (zoomOpen ? closeZoom : openZoom) : undefined}
                   showEnd
                 />
               </Suspense>
             ) : null}
+
+          </div>
 
             {showPreStartPanel ? (
               <div
@@ -672,7 +677,6 @@ export function PreviewViewer({
                 ) : null}
               </div>
             ) : null}
-          </div>
 
           <div className={styles.footer}>
             {fallbackNotice ? <p className={styles.fallbackNotice} role="status">{fallbackNotice}</p> : null}

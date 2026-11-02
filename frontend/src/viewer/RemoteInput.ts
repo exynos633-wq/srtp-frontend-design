@@ -13,7 +13,7 @@ export class RemoteInput {
   private send: (value: object) => void
 
   constructor(video: HTMLVideoElement, send: (value: object) => void,
-    reset: () => void, teleport: (x: number, y: number) => void) {
+    reset: () => void) {
     this.send = send
     const signal = this.events.signal
     video.addEventListener('contextmenu', (event) => event.preventDefault(), { signal })
@@ -62,10 +62,6 @@ export class RemoteInput {
     }, { signal })
     window.addEventListener('keyup', (event) => {
       if (this.keys.delete(event.key.toLowerCase())) this.flush()
-    }, { signal })
-    video.addEventListener('dblclick', (event) => {
-      const rect = video.getBoundingClientRect()
-      if (rect.width && rect.height) teleport((event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height)
     }, { signal })
     video.addEventListener('blur', () => this.clear(), { signal })
     window.addEventListener('blur', () => this.clear(), { signal })

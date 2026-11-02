@@ -4,16 +4,16 @@ import type { ModelViewer } from './ModelViewer'
 export type ViewerController = Pick<ModelViewer,
   | 'load' | 'reload' | 'dispose' | 'setDprCap' | 'setSourceUp'
   | 'setBloom' | 'setBloomStrength' | 'setUniformTone' | 'setSplatScale'
-  | 'setSoftLight' | 'setEmission' | 'setFlySpeed' | 'setWalkSpeed'
-  | 'rotateOrientation' | 'resetOrientation' | 'getWalkDefaults' | 'configureWalk'
+  | 'setSoftLight' | 'setEmission' | 'setFlySpeed'
+  | 'rotateOrientation' | 'resetOrientation'
   | 'beginParameterInteraction' | 'endParameterInteraction' | 'clearUserInput'
   | 'setAutoRotate' | 'setTouchEnabled' | 'resetDisplay' | 'resetView' | 'setMode'
   | 'capturePng' | 'isRecording' | 'startRecording' | 'stopRecording'>
 
 export const REMOTE_COMMANDS = [
   'setSourceUp', 'setBloom', 'setBloomStrength', 'setUniformTone', 'setSplatScale',
-  'setSoftLight', 'setEmission', 'setFlySpeed', 'setWalkSpeed', 'rotateOrientation',
-  'resetOrientation', 'configureWalk', 'beginParameterInteraction', 'endParameterInteraction',
+  'setSoftLight', 'setEmission', 'setFlySpeed', 'rotateOrientation',
+  'resetOrientation', 'beginParameterInteraction', 'endParameterInteraction',
   'clearUserInput', 'setAutoRotate', 'resetDisplay', 'resetView', 'setMode',
 ] as const
 export type RemoteCommand = typeof REMOTE_COMMANDS[number]

@@ -390,3 +390,29 @@
     height: min(74vh, 620px);
   }
 }
+
+/* Pre-start actions live outside the cropped cover. */
+.statusPanel {
+  position: static;
+  width: 100%;
+  max-width: none;
+  transform: none;
+  margin: 0;
+}
+.cover[data-status='loading'], .cover[data-status='interactive'], .cover[data-status='viewer-error'] {
+  aspect-ratio: auto;
+  height: clamp(440px, 62vh, 720px);
+}
+.viewer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.footer {
+  padding: 8px 0;
+}
+.cover {
+  border-radius: var(--radius-panel);
+}
+
+.cover { border-color: transparent; border-radius: 0; }

@@ -36,6 +36,7 @@ export function ModelViewport(props: {
     <div data-testid="model-viewport-stub" data-remote={remote ? 'true' : 'false'}>
       {remote ? <button onClick={() => props.onRemoteFailure?.(new Error('测试断流'))}>协议桩：断流</button> : null}
       <p>{source ? `真实查看器测试替身 · ${modelName}` : '尚未配置模型资源（测试替身）'}</p>
+      <button type="button" data-action="more">更多</button>
       {onZoom ? (
         <button type="button" data-action="zoom" aria-label="放大查看" onClick={onZoom}>
           放大查看

@@ -95,6 +95,20 @@ async function connect() {
 }
 
 describe('WebRTC 协议桩生命周期（不代表 GPU 性能）', () => {
+  it('移除步行必需能力，旧节点的多余字段仍兼容；方向确认只需要模型信息', async () => {
+    expect(requiredRemoteCommands(info)).not.toEqual(expect.arrayContaining(['configureWalk']))
+    expect(requiredRemoteCommands(info)).not.toContain('teleport')
+    const peer = await connect()
+    frame(0, {} as VideoFrameCallbackMetadata)
+    peer.channel.receive({ v: 1, type: 'ready', info, walkDefaults: { ground: 0 }, capabilities: [...requiredRemoteCommands(info), 'configureWalk', 'teleport'] })
+    viewer.rotateOrientation('x')
+    const commands = peer.channel.send.mock.calls.map(([raw]) => JSON.parse(raw)).filter((message) => message.type === 'command')
+    const id = commands.findLast((message) => message.name === 'rotateOrientation').id
+    peer.channel.receive({ v: 1, type: 'ack', id, ok: true, info })
+    expect(failure).not.toHaveBeenCalled()
+    expect(events).toContainEqual({ type: 'mode', mode: 'orbit' })
+  })
+
   it('节点 ready 不能代替首帧；只申请接收视频，退出后关闭所有连接', async () => {
     const peer = await connect()
     expect(events.some((event) => event.type === 'ready')).toBe(false)

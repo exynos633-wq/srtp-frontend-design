@@ -189,12 +189,6 @@ function WorkDetailContent({ id }: { id?: string }) {
               <p className={styles.paragraph}>{displayedWork.description}</p>
             </section>
 
-            {displayedWork.modelingNote && displayedWork.modelingNote.trim() !== '' ? (
-              <section className={styles.section} data-detail-layer>
-                <h2 className={styles.sectionTitle}>建模说明（选填）</h2>
-                <p className={styles.paragraph}>{displayedWork.modelingNote}</p>
-              </section>
-            ) : null}
 
             <section className={classNames(styles.section, styles.commentSection)} data-detail-layer>
               <h2 className={styles.sectionTitle}>评论 · 预留</h2>

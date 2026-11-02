@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 import { expect, test } from '@playwright/test'
 
 const MESH_PLY = [
@@ -46,12 +47,12 @@ test('DEV 测试台加载网格 PLY，显示网格格式与三角面统计', asy
 
   await expect(page.locator('[data-viewer-format="mesh-ply"]')).toBeVisible()
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
-  await page.getByRole('button', { name: '模型信息' }).click()
+  await (await viewerMenuItem(page, '模型信息')).click()
   const info = page.locator('aside[aria-label="模型信息"]')
   await expect(info).toBeVisible()
   await expect(info.getByText('PLY 网格', { exact: true })).toBeVisible()
   await expect(info.getByText('2', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '显示设置' }).click()
+  await (await viewerMenuItem(page, '显示设置')).click()
   await expect(page.getByLabel('柔和补光')).toBeEnabled()
   await expect(page.locator('#viewer-splat-scale')).toBeDisabled()
 })

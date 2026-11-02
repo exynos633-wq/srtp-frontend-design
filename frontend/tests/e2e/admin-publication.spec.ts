@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 /// <reference types="node" />
 import { expect, test, type Page } from '@playwright/test'
 
@@ -55,7 +56,7 @@ async function openPublicWorks(page: Page) {
 async function backToAdmin(page: Page) {
   await page
     .getByRole('navigation', { name: '公开展示区导航' })
-    .getByRole('link', { name: '后台管理' })
+    .getByRole('link', { name: '管理入口' })
     .click()
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
   await expect(page.getByRole('table', { name: '管理作品列表' })).toBeVisible()
@@ -202,7 +203,7 @@ test('已开始观看保留，但下架后新的开始申请按公开状态被�
 
   // 已开始的观看实例不因下架或缓存失效被强行结束。
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
-  await page.getByRole('button', { name: '结束预览' }).click()
+  await (await viewerMenuItem(page, '结束预览')).click()
   await page.getByRole('button', { name: '开始预览' }).click()
   await expect(page.getByText('作品当前不可预览')).toBeVisible({ timeout: 5000 })
   await expect(page.getByText(/该作品已不再公开/)).toBeVisible()
@@ -342,7 +343,7 @@ test('慢下架在退出后完成仍刷新公开目录与地球缓存', async ({
 
   await page
     .getByRole('navigation', { name: '公开展示区导航' })
-    .getByRole('link', { name: '后台管理' })
+    .getByRole('link', { name: '管理入口' })
     .click()
   await expect(page.getByRole('heading', { name: '管理员登录' })).toBeVisible({ timeout: 15_000 })
   await signIn(page)

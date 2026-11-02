@@ -13,7 +13,7 @@ export function requiredRemoteCommands(info: ModelInfo): string[] {
     if (name === 'setSoftLight') return info.format !== 'gaussian-ply'
     if (name === 'setEmission') return info.format === 'glb' && info.hasEmissive
     return true
-  }), 'resize', 'teleport']
+  }), 'resize']
 }
 
 /** 与 ModelViewer 共用工具栏；此类不加载模型，也不创建 WebGL 上下文。 */
@@ -40,8 +40,6 @@ export class RemoteModelViewer implements ViewerController {
   private observer: ResizeObserver | null = null
   private sequence = 0
   private acknowledgements = new Map<number, { timer: ReturnType<typeof setTimeout>; name: string }>()
-  private config: ModelViewConfig = {}
-  private walk: ReturnType<ViewerController['getWalkDefaults']> | null = null
   private events = new AbortController()
 
   private video: HTMLVideoElement
@@ -85,7 +83,6 @@ export class RemoteModelViewer implements ViewerController {
   async load(_source: ModelSource | null, config: ModelViewConfig = {}) {
     if (this.started || this.disposed) return
     this.started = true
-    this.config = config
     this.emit({ type: 'phase', phase: 'initialize', detail: '正在申请 GPU 渲染会话' })
     const timeout = this.later(() => this.fail(new Error('远程连接超过 30 秒。')), 30_000)
     try {
@@ -185,7 +182,6 @@ export class RemoteModelViewer implements ViewerController {
         }
         this.info = info
         this.media.setName(info.sourceName)
-        this.walk = message.walkDefaults ?? null
         this.ready()
       } else if (message.type === 'ack') {
         const pending = this.acknowledgements.get(message.id)
@@ -194,14 +190,14 @@ export class RemoteModelViewer implements ViewerController {
         this.acknowledgements.delete(message.id)
         if (message.ok !== true) throw new Error(message.message || '节点未能应用操作。')
         if (['setSourceUp', 'rotateOrientation', 'resetOrientation'].includes(pending.name)) {
-          if (!message.info || !message.walkDefaults) throw new Error('节点未返回方向修改后的模型与步行状态。')
+          if (!message.info) throw new Error('节点未返回方向修改后的模型状态。')
           this.mode = 'orbit'
           this.emit({ type: 'mode', mode: 'orbit' })
         }
         if (message.info) { this.info = message.info; this.emit({ type: 'info', info: message.info }) }
-        if (message.walkDefaults) this.walk = message.walkDefaults
       } else if (message.type === 'state') {
-        if (['orbit', 'fly', 'walk'].includes(message.mode)) {
+        if (message.mode === 'walk') this.setMode('orbit')
+        if (['orbit', 'fly'].includes(message.mode)) {
           this.mode = message.mode
           this.emit({ type: 'mode', mode: this.mode })
         }
@@ -221,11 +217,7 @@ export class RemoteModelViewer implements ViewerController {
     // ready 消息和首帧的到达顺序不固定，因此清除仍在等待的连接超时。
     this.timers.forEach(clearTimeout)
     this.timers.clear()
-    this.input = new RemoteInput(this.video, (value) => this.send(value), () => this.resetView(), (x, y) => {
-      if (this.mode === 'walk' && this.walk?.areaTrusted && window.confirm('Walk 只有地面约束，不防穿墙。确认传送到该点吗？')) {
-        this.command('teleport', [x, y])
-      }
-    })
+    this.input = new RemoteInput(this.video, (value) => this.send(value), () => this.resetView())
     this.setAutoRotate(this.options.autoRotate ?? false)
     this.observer = new ResizeObserver(() => this.resize())
     this.observer.observe(this.host)
@@ -243,7 +235,7 @@ export class RemoteModelViewer implements ViewerController {
     try { this.channel.send(JSON.stringify(value)) } catch (error) { this.fail(error) }
   }
 
-  private command(name: RemoteCommand | 'resize' | 'teleport', args: unknown[]) {
+  private command(name: RemoteCommand | 'resize', args: unknown[]) {
     if (!this.initialized || this.disposed) return
     const id = ++this.sequence
     this.acknowledgements.set(id, { timer: setTimeout(() => this.fail(new Error('节点超过 5 秒未确认操作。')), 5000), name })
@@ -268,15 +260,8 @@ export class RemoteModelViewer implements ViewerController {
   setSoftLight(enabled: boolean, intensity?: number) { this.command('setSoftLight', [enabled, intensity ?? 1]) }
   setEmission(enabled: boolean, intensity?: number) { this.command('setEmission', [enabled, intensity ?? 1.6]) }
   setFlySpeed(value: number) { this.command('setFlySpeed', [value]) }
-  setWalkSpeed(value: number) { this.command('setWalkSpeed', [value]) }
   rotateOrientation(axis: 'x' | 'y' | 'z') { this.command('rotateOrientation', [axis]) }
   resetOrientation() { this.command('resetOrientation', []) }
-  getWalkDefaults() {
-    return this.walk ?? { ground: this.config.ground?.height ?? this.info?.bounds.min[2] ?? 0,
-      eyeHeight: this.config.eyeHeight ?? 1, start: this.config.walkStart ?? [0, 0] as [number, number],
-      area: this.config.walkArea, areaTrusted: this.config.walkAreaTrusted ?? false }
-  }
-  configureWalk(config: Parameters<ViewerController['configureWalk']>[0]) { this.command('configureWalk', [config]) }
   beginParameterInteraction() { this.clearUserInput(); this.command('beginParameterInteraction', []) }
   endParameterInteraction() { this.command('endParameterInteraction', []) }
   clearUserInput() { this.input?.clear(); this.command('clearUserInput', []) }

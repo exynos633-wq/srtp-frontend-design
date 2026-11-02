@@ -5,7 +5,7 @@ export const GLOBE_FOV = 35
 export const MIN_ZOOM = 1
 export const MAX_ZOOM = 1.6
 /** 边缘光外壳相对球体的放大比例，用于把目标直径换算成相机距离。 */
-export const ATMOSPHERE_SCALE = 1.028
+export const ATMOSPHERE_SCALE = 1.045
 export const MIN_LATITUDE = -70
 export const MAX_LATITUDE = 70
 /** 球面点积在可见地平线之外的极小余量，避免边缘点被当成正面。 */
@@ -111,14 +111,14 @@ export function nearestFrontPoint<T extends { x: number; y: number; front: boole
 
 /**
  * 规范中的构图直径：
- * - 手机：390 宽对应 405，其他宽度等比；
- * - 桌面：760，并受可用宽高约束；
- * - 中间：可用宽 95%、高 90%。
+ * - 手机：球体占可用宽度 92%，并受高度限制；
+ * - 桌面：上限 760，并为文案和页底留出高度；
+ * - 中间：可用宽 55%、高 76%。
  */
 export function globeDiameterForViewport(width: number, height: number): number {
-  if (width < 768) return Math.min((width * 405) / 390, height * 0.9)
-  if (width < 1024) return Math.min(width * 0.95, height * 0.9)
-  return Math.min(760, width * 0.54, height * 0.94)
+  if (width < 768) return Math.min(width * 0.92, height * 0.86)
+  if (width < 1024) return Math.min(width * 0.55, height * 0.76)
+  return Math.min(920, width * 0.59, height * 0.84)
 }
 
 /** 相机到球心的距离：让球体连同边缘光的外径接近目标像素。 */
@@ -135,12 +135,12 @@ export function cameraDistanceForDiameter(
   return clamp(distance, 2.2, 24)
 }
 
-/** 画面偏移：桌面球心在 45% 宽，手机在 45% 高。 */
+/** 画面偏移：桌面球心在 66% 宽，手机在 45% 高。 */
 export function globeViewOffset(
   width: number,
   height: number,
 ): { x: number; y: number; horizontal: number; vertical: number } {
-  const horizontal = width < 768 ? 0.5 : 0.45
+  const horizontal = width < 768 ? 0.5 : 0.66
   const vertical = width < 768 ? 0.45 : 0.5
   return {
     x: (0.5 - horizontal) * width,

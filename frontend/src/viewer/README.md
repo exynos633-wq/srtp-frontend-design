@@ -1,3 +1,5 @@
+> 2026-10-31 UI 更新：前端已移除步行／点击传送。当前控制模式只有 `orbit` 和 `fly`；`setWalkSpeed`、`configureWalk`、`getWalkDefaults` 已删除。旧 preview-config 的步行字段仅保留输入兼容，不产生作用。所有非模式工具位于“更多”；建模说明通过可选 `modelingNote` 展示参数传入。本文下方保留的 Walk 与历史 E2E 段落仅作为旧实现记录，不再作为现行接口依据。
+
 # 客户端模型查看器
 
 2026-10-29：公开端与管理端现在解析完整 preview-config；`mode: remote` 使用 `RemoteModelViewer` 接 WebRTC 视频与控制，复用 `ModelViewport` 工具栏，失败后重新校验并自动降级本目录的本地渲染器。`mode: client` 继续兼容旧后端／DEV Mock。协议与节点接入要求见 [GPU 规范](../../../工程设计/14_GPU远程渲染对接规范.md)，验证边界见 [实施记录](../../../工程设计/15_GPU前端实施记录.md)。
@@ -103,7 +105,7 @@ const viewer = new ModelViewer(canvas, host, {
 })
 
 await viewer.load(source, viewConfig)
-viewer.setMode('orbit' | 'fly' | 'walk')
+viewer.setMode('orbit' | 'fly')
 viewer.setAutoRotate(false)
 viewer.setTouchEnabled(true)
 viewer.setBloom(true, 0.25)
@@ -113,12 +115,9 @@ viewer.setSplatScale(1.2)          // 单 splat 尺度，不是 Object3D.scale
 viewer.setSoftLight(true, 1.2)     // GLB／网格 PLY；强度范围 0–2
 viewer.setEmission(true, 1.6)      // 仅原有发光材质；统一色调下不可见
 viewer.setFlySpeed(1.2)            // 相对速度
-viewer.setWalkSpeed(0.6)
 viewer.setSourceUp('y')            // null = 按内容自动；会重置方向叠加并回 Orbit
 viewer.rotateOrientation('x')      // 根节点再叠加 +90°，不改文件/不重解析
 viewer.resetOrientation()
-viewer.configureWalk({ ground, eyeHeight, start: [x, y] })
-viewer.getWalkDefaults()
 viewer.beginParameterInteraction() // 滑块/输入框按住
 viewer.endParameterInteraction()
 viewer.resetDisplay()              // 只重置显示参数，不动相机

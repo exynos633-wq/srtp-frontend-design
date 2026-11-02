@@ -32,7 +32,7 @@ describe('公开运行配置', () => {
 
     const appConfig = await loadConfig()
 
-    expect(appConfig.appName).toBe('建筑模型展厅')
+    expect(appConfig.appName).toBe('低空视界')
     expect(appConfig.apiBaseUrl).toBe('/api')
     expect(appConfig.enableMocks).toBe(false)
   })
@@ -42,7 +42,7 @@ describe('公开运行配置', () => {
 
     const appConfig = await loadConfig()
 
-    expect(appConfig.appName).toBe('建筑模型展厅')
+    expect(appConfig.appName).toBe('低空视界')
     expect(appConfig.apiBaseUrl).toBe('/api')
     expect(appConfig.enableMocks).toBe(false)
   })

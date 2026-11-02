@@ -31,7 +31,7 @@ export type ViewerPhase =
   | 'error'
   | 'ended'
 
-export type ViewerMode = 'orbit' | 'fly' | 'walk'
+export type ViewerMode = 'orbit' | 'fly'
 
 /** 源文件坐标系。GLB 标准为 Y-up；PLY（网格/3DGS）无统一方向，默认按 Z-up 展示。 */
 export type SourceUp = 'y' | 'z'
@@ -55,7 +55,7 @@ export interface ModelViewConfig {
     position?: [number, number, number]
     target?: [number, number, number]
   } | null
-  /** 可选地面约束。未设置时 Walk 使用 bounds 底部作为建议值。 */
+  /** @deprecated 仅兼容旧 preview-config，前端不再使用步行字段。 */
   ground?: { height: number } | null
   /** 可信的有限步行区域；没有时禁用点击传送，只能地面行走。 */
   walkArea?: WalkArea | null
@@ -77,7 +77,6 @@ export interface ModelViewerOptions {
   lowPower?: boolean
   reducedMotion?: boolean
   flySpeed?: number
-  walkSpeed?: number
   backgroundColor?: number
   /** 录制结束是否自动下载；卸载清理时永远不自动下载。 */
   autoDownloadRecording?: boolean

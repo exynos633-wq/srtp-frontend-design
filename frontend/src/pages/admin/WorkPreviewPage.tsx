@@ -155,6 +155,7 @@ export default function WorkPreviewPage() {
                 name: workDisplayName(work.name),
                 coverUrl: work.coverUrl ?? '',
                 modelFormat: work.modelFormat,
+                modelingNote: work.modelingNote,
               }}
               adminPreview
               resolvePreviewConfig={(workId) => queryClient.fetchQuery({

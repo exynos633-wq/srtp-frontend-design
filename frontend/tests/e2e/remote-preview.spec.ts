@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 
@@ -23,7 +24,7 @@ test('WebRTC 协议桩：真实收流、共用工具栏、PNG、35 秒录制、�
     const { createElement } = React
     const { createRoot } = ReactDOM
     const host = document.createElement('div')
-    host.style.cssText = 'position:fixed;inset:0;background:#101519;z-index:9999;padding:24px'
+    host.style.cssText = 'position:fixed;inset:0;background:#101519;z-index:9999;padding:24px;overflow:auto'
     document.body.append(host)
     const root = createRoot(host)
     const canvas = document.createElement('canvas')
@@ -102,26 +103,26 @@ test('WebRTC 协议桩：真实收流、共用工具栏、PNG、35 秒录制、�
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ width: 1440, height: 900 })
   expect(await page.evaluate(() => window.__remoteFixture.modelReads)).toBe(0)
-  await page.getByRole('button', { name: '复位视角' }).click()
+  await page.getByRole('button', { name: '复位视角', exact: true }).click()
   await expect.poll(() => page.evaluate(() => window.__remoteFixture.commands)).toContain('resetView')
   const pngDownload = page.waitForEvent('download')
-  await page.getByRole('button', { name: '保存 PNG 截图' }).click()
+  await (await viewerMenuItem(page, '保存 PNG 截图')).click()
   const png = await pngDownload
   const data = fs.readFileSync((await png.path())!)
   expect(data.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
   expect(data.readUInt32BE(16)).toBe(640)
-  await page.getByRole('button', { name: '录制 35 秒' }).click()
-  await expect(page.getByRole('button', { name: '停止录制' })).toBeVisible()
+  await (await viewerMenuItem(page, '录制 35 秒')).click()
+  await expect((await viewerMenuItem(page, '停止录制'))).toBeVisible()
   await page.waitForTimeout(500)
-  await page.getByRole('button', { name: '停止录制' }).click()
-  await expect(page.getByRole('button', { name: '下载视频' })).toBeVisible()
+  await (await viewerMenuItem(page, '停止录制')).click()
+  await expect((await viewerMenuItem(page, '下载视频'))).toBeVisible()
   expect(await page.locator('[data-viewer-video]').evaluate((element) =>
     ((element as HTMLVideoElement).srcObject as MediaStream).getVideoTracks()[0]?.readyState)).toBe('live')
-  await page.getByRole('button', { name: '录制 35 秒' }).click()
-  await expect(page.getByRole('button', { name: '停止录制' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '下载视频' })).toBeVisible({ timeout: 40_000 })
+  await (await viewerMenuItem(page, '录制 35 秒')).click()
+  await expect((await viewerMenuItem(page, '停止录制'))).toBeVisible()
+  await expect((await viewerMenuItem(page, '下载视频'))).toBeVisible({ timeout: 40_000 })
   const videoDownload = page.waitForEvent('download')
-  await page.getByRole('button', { name: '下载视频' }).click()
+  await (await viewerMenuItem(page, '下载视频')).click()
   const recording = await videoDownload
   const bytes = fs.readFileSync((await recording.path())!)
   expect(bytes.length).toBeGreaterThan(1000)
@@ -146,7 +147,7 @@ test('WebRTC 协议桩：真实收流、共用工具栏、PNG、35 秒录制、�
   expect(await page.evaluate(() => window.__remoteFixture.modelReads)).toBe(1)
   expect(await page.evaluate(() => window.__remoteFixture.configs)).toBe(2)
   await expect.poll(() => page.evaluate(() => window.__remoteFixture.deletes)).toBe(1)
-  await page.getByRole('button', { name: '结束预览' }).click()
+  await (await viewerMenuItem(page, '结束预览')).click()
   await expect(page.locator('[data-viewer-video]')).toHaveCount(0)
   await page.evaluate(() => window.__remoteFixture.stop())
 })

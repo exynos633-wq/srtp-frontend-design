@@ -68,7 +68,7 @@ async function goHome(page: Page) {
 async function goAdmin(page: Page) {
   await page
     .getByRole('navigation', { name: '公开展示区导航' })
-    .getByRole('link', { name: '后台管理' })
+    .getByRole('link', { name: '管理入口' })
     .click()
   await expect(page.getByRole('heading', { name: '作品管理' })).toBeVisible()
 }

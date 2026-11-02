@@ -41,15 +41,6 @@ export function FlyIcon(props: IconProps) {
   )
 }
 
-export function WalkIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <circle cx="13" cy="4.5" r="2" />
-      <path d="M12 7l-2 5 3 2 1 6M10 12l-4 2M13 14l4 2M10 19l-2 3" />
-    </Icon>
-  )
-}
-
 export function ResetIcon(props: IconProps) {
   return (
     <Icon {...props}>

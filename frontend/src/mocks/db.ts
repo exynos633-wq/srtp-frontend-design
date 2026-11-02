@@ -78,6 +78,10 @@ interface SeedInput {
 }
 
 const PLACEHOLDER_COVER = '/mock/placeholder-cover.svg'
+const DEMO_COVERS: Record<string, string> = {
+  work_demo_001: '/mock/covers/courtyard.webp',
+  work_demo_002: '/mock/covers/great-wall.webp',
+}
 
 function toCityRef(cityId: string | null): CityRef | null {
   if (cityId === null) return null
@@ -96,7 +100,7 @@ function createWork(input: SeedInput): MockWork {
     name: input.name,
     cityId: input.cityId,
     city: toCityRef(input.cityId),
-    coverUrl: complete ? PLACEHOLDER_COVER : null,
+    coverUrl: complete ? (DEMO_COVERS[input.id] ?? PLACEHOLDER_COVER) : null,
     modelFormat: complete ? input.modelFormat : null,
     description: input.description,
     modelingNote: input.modelingNote ?? null,
