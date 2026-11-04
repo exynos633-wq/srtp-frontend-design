@@ -125,6 +125,30 @@
 
 .iconButtonActive::after {
   transform: scaleX(1);
+  /* §4.3 工具栏选中光带：在 1px accent 下划线上叠一条缓慢经过的亮段（4.8s = 4 × --dur-cinema），
+   * 两端 accent 渐隐、中间银亮，只动 background-position，不改按钮尺寸与布局。 */
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent-hover) 35%,
+    var(--color-silver) 50%,
+    var(--color-accent-hover) 65%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 50% 100%;
+  background-position: -100% 0;
+  animation: toolbar-light calc(var(--dur-cinema) * 4) linear infinite;
+}
+
+@keyframes toolbar-light {
+  from {
+    background-position: -100% 0;
+  }
+
+  to {
+    background-position: 200% 0;
+  }
 }
 
 .iconButtonDanger {
@@ -786,23 +810,26 @@
 .moreMenu {
   opacity: 1;
   transform: translateY(0) scale(1);
+  /* §4.3：进入用 spring 曲线（tokens 的 --ease-spring），收尾更有实体感。 */
   transition:
-    opacity var(--dur-press) var(--ease-out),
-    transform var(--dur-press) var(--ease-out);
+    opacity var(--dur-press) var(--ease-spring),
+    transform var(--dur-press) var(--ease-spring);
 }
 
 .moreMenu[data-closing='true'] {
   opacity: 0;
   transform: translateY(6px) scale(0.98);
-  /* §7 关闭不超过 100ms：≈98ms。 */
+  /* §7 关闭不超过 100ms：≈98ms，退出仍走 --ease-out，不做回弹。 */
   transition-duration: calc(var(--dur-press) * 0.7);
+  transition-timing-function: var(--ease-out);
 }
 
 .settings,
 .infoPanel {
+  /* 进入同样换 spring；[data-closing] 规则会覆盖为 160ms --ease-out。 */
   transition:
-    opacity var(--dur-base) var(--ease-drawer),
-    transform var(--dur-base) var(--ease-drawer);
+    opacity var(--dur-base) var(--ease-spring),
+    transform var(--dur-base) var(--ease-spring);
 }
 
 .settings[data-closing='true'],
@@ -835,6 +862,27 @@
   }
 }
 
+/* —— 动效 v2.1 §4.3：浮层用半透明深底 + 小面积背景模糊（§5.3 blur ≤ 6px，不扩大玻璃面积） ——
+ * 只给更多菜单与设置/信息面板；减少动态下仍是静态模糊，不做过渡。
+ */
+.moreMenu,
+.settings,
+.infoPanel {
+  background: rgb(16 25 31 / 82%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* 移动端/紧凑容器把模糊降到 4px，控制填充成本。 */
+@container (max-width: 560px) {
+  .moreMenu,
+  .settings,
+  .infoPanel {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
 /* 减少动态：保留透明度/颜色反馈，去掉外壳、菜单、面板的位移（§9）。 */
 @media (prefers-reduced-motion: reduce) {
   .root,
@@ -846,5 +894,11 @@
   .settings[data-closing='true'],
   .infoPanel[data-closing='true'] {
     transition-property: opacity;
+  }
+
+  /* 选中光带停走，只保留静态 accent 下划线（§4.5）。 */
+  .iconButtonActive::after {
+    animation: none;
+    background-image: none;
   }
 }

@@ -128,6 +128,13 @@
   --ambient-slower: 30s;
   --grain-opacity: 0.06;
   --grain-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+
+  /* —— P1 签名动效（v2.1 §4.1–§4.3） —— */
+  /* 高摩擦 spring：轻微过冲、收尾快，只用于菜单/面板等可抓取元素。 */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-breath: 8s;
+  --dur-ripple: 1600ms;
+  --dur-beam: 1200ms;
 }
 
 /* 手机布局：<768（规范 §4.1）。 */
@@ -156,5 +163,8 @@
     --dur-enter: 0ms;
     --dur-scene: 0ms;
     --dur-cinema: 0ms;
+    --dur-breath: 0s;
+    --dur-ripple: 0s;
+    --dur-beam: 0s;
   }
 }

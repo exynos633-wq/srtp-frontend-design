@@ -11,6 +11,48 @@
   padding: 64px 180px 40px 0;
 }
 .header h1 { font-size: clamp(38px, 5vw, 64px); line-height: 1.15; letter-spacing: -.04em; }
+
+/*
+ * v2.1 §4.2 目录签名 · lamp 灯管。
+ * headerStage 只做定位与层叠上下文：灯管与光团绝对定位、不占高度，因此不产生布局跳动。
+ */
+.headerStage {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 1px accent 亮线：从中间展开，是“灯管”本身。scaleX 默认 1 = 减少动态/二次进入的最终态。 */
+.lampLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-accent);
+  box-shadow: 0 0 14px rgb(84 200 193 / 55%);
+  transform: scaleX(1);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+/* 灯管下方一层柔光：静态 blur(24px)，只动 opacity（0→.6→.35），不铺到内容上。 */
+.lampGlow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: -1;
+  width: min(760px, 96%);
+  height: 190px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse 58% 100% at 50% 0%,
+    rgb(84 200 193 / 18%),
+    transparent 72%
+  );
+  filter: blur(24px);
+  opacity: 0.35;
+  pointer-events: none;
+}
 .header > p:first-child { font-size: 11px; letter-spacing: .16em; color: var(--color-accent); }
 .header > p:nth-of-type(2) { max-width: 48ch; font-size: 15px; line-height: 1.8; }
 .collectionCount {
@@ -22,8 +64,38 @@
   text-align: right;
   color: var(--color-text-muted);
 }
-.collectionCount strong { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 72px; line-height: 1; font-weight: 400; letter-spacing: -.08em; }
+.collectionCount strong { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 72px; line-height: 1; font-weight: 400; letter-spacing: -.08em; font-variant-numeric: tabular-nums; }
 .collectionCount span { font-size: 12px; letter-spacing: .12em; }
+/* 目录内容容器：扫描线只在这一层内裁切，不影响卡片焦点环与页面高度。 */
+.directoryBody {
+  position: relative;
+}
+
+/*
+ * v2.1 §4.2 签名扫描线：1px 高的 accent→透明渐变高光，由 GSAP 从左侧扫到右侧。
+ * 容器固定 1px 高并 overflow 裁切，因此不会产生横向滚动；pointer-events 关闭。
+ */
+.scanStage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.scanLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 180px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-accent) 50%, transparent);
+  transform: translateX(-100%);
+}
+
 .directoryMeta {
   position: relative;
   display: flex;
@@ -72,6 +144,17 @@
   margin-top: var(--space-6);
 }
 .grid { margin-top: 8px; row-gap: 40px; }
+
+/*
+ * v2.1 §4.2 hover 聚焦：指针悬停某张卡片时，同一网格其余卡片压暗到 .55，
+ * 形成“导览”关系。键盘 focus 不触发（只看 :hover）；触屏与减少动态不启用。
+ * 过渡 180ms 取最近的 --dur-fast（160ms），写在卡片的 transition 里。
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .grid:has([data-work-card-link]:hover) [data-work-card-link]:not(:hover) {
+    opacity: 0.55;
+  }
+}
 
 .skeletonGrid {
   margin-top: 0;

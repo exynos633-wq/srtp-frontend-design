@@ -74,7 +74,8 @@ function WorkDetailContent({ id }: { id?: string }) {
     if (!workId) return
     if (!prefersReducedMotion()) {
       const layers = pageRef.current?.querySelectorAll<HTMLElement>('[data-detail-layer]')
-      if (layers) gsap.set(layers, { opacity: 0, y: 10 })
+      // §4.3 信息列遮罩揭示：先收起 clip-path 再逐项揭开，单独用透明度会显得平。
+      if (layers) gsap.set(layers, { clipPath: 'inset(0 0 100% 0)', y: 10 })
     }
     // 直接进入与目录进入都把焦点落在主标题；页面可用性不依赖转场是否完成。
     titleRef.current?.focus({ preventScroll: true })
@@ -86,19 +87,19 @@ function WorkDetailContent({ id }: { id?: string }) {
       const layers = pageRef.current?.querySelectorAll<HTMLElement>('[data-detail-layer]')
       if (!layers || layers.length === 0) return
       if (prefersReducedMotion()) {
-        gsap.set(layers, { clearProps: 'opacity,transform' })
+        gsap.set(layers, { clearProps: 'clipPath,transform' })
         return
       }
-      // §7：信息列在封面到位前约 200ms（coverFlip 的 onEntered 时点）逐项入场，
-      // 单项 380ms、stagger 60ms、y 10；不再整组淡入。
+      // §4.3：信息列在封面到位前约 200ms（coverFlip 的 onEntered 时点）逐项 mask 揭示，
+      // 单项 380ms、stagger 60ms、y 10；不给列表加 blur（列表 blur 会脏）。
       gsap.to(layers, {
-        opacity: 1,
+        clipPath: 'inset(0 0 0 0)',
         y: 0,
         duration: SEC.enter,
         ease: EASE.out,
         stagger: 0.06,
         overwrite: true,
-        clearProps: 'opacity,transform',
+        clearProps: 'clipPath,transform',
       })
     },
     { scope: pageRef, dependencies: [entered, displayedWork?.id] },

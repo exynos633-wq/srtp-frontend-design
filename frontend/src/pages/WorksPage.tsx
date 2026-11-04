@@ -21,10 +21,13 @@ const SKELETON_COUNT = 6
 
 /** 目录页头入场只在本会话首次进入播放一次（动效设计 v2.0 §2「叙事只发生一次」）。 */
 let directoryEntrancePlayed = false
+/** 首屏签名扫描线同样只播一次（动效设计 v2.1 §4.2）；与数据到达时点解耦。 */
+let directoryScanPlayed = false
 
 /**
  * §6 目录的设计时长统一落回 motion.ts 的 SEC，避免散落字面量；
  * 时间轴位置（0.08 / 0.18 …）与 stagger 只是编排参数，随注释指认。
+ * v2.1 §4.2 的签名时长同样由 SEC 组合：灯管 600ms、光团 900ms、扫描线/计数 800ms。
  */
 const TIMING = {
   eyebrow: SEC.slow, // 280ms
@@ -33,6 +36,10 @@ const TIMING = {
   count: SEC.press + SEC.fast, // 300ms
   index: SEC.base + SEC.press, // 360ms
   reveal: SEC.scene * 0.7, // 420ms
+  lampLine: SEC.scene, // 600ms
+  lampGlow: SEC.cinema * 0.75, // 900ms
+  scan: SEC.cinema * (2 / 3), // 800ms
+  ticker: SEC.cinema * (2 / 3), // 800ms
 } as const
 
 function DirectorySkeleton() {
@@ -56,6 +63,8 @@ export default function WorksPage() {
   const restoredRef = useRef(false)
   /** 页头入场是否仍在播放，用于把计数/索引行/首排对齐 §6 的绝对时点。 */
   const entranceRef = useRef<{ startedAt: number; playing: boolean } | null>(null)
+  /** 计数 ticker 只改这个 DOM 文本节点的 nodeValue，不逐帧 setState（v2.1 §4.2）。 */
+  const countNumberRef = useRef<HTMLElement>(null)
 
   const { data, isPending, isError, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.works.list(),
@@ -129,6 +138,32 @@ export default function WorksPage() {
         0.18,
       )
 
+      // v2.1 §4.2 lamp 灯管：1px 亮线从中间展开（600ms）+ 一层 blur 光团呼吸（900ms）。
+      // 两者都是绝对定位的装饰层，不参与布局；blur 是静态的，只动 transform / opacity。
+      const lampLine = root.querySelector<HTMLElement>('[data-lamp-line]')
+      const lampGlow = root.querySelector<HTMLElement>('[data-lamp-glow]')
+      if (lampLine) {
+        timeline.fromTo(
+          lampLine,
+          { scaleX: 0 },
+          { scaleX: 1, duration: TIMING.lampLine, ease: EASE.out, clearProps: 'transform' },
+          0,
+        )
+      }
+      if (lampGlow) {
+        timeline.fromTo(
+          lampGlow,
+          { opacity: 0 },
+          { opacity: 0.6, duration: TIMING.lampGlow * 0.5, ease: EASE.out },
+          0,
+        )
+        timeline.to(
+          lampGlow,
+          { opacity: 0.35, duration: TIMING.lampGlow * 0.5, ease: EASE.out },
+          TIMING.lampGlow * 0.5,
+        )
+      }
+
       // 入场途中切到「减少动态」：直接落到最终状态，不再播完位移。
       // 测试环境可能没有 matchMedia，此时不订阅（不影响一次性入场）。
       const motionQuery =
@@ -140,7 +175,12 @@ export default function WorksPage() {
         timeline.kill()
         directoryEntrancePlayed = true
         if (entranceRef.current) entranceRef.current.playing = false
-        gsap.set([eyebrow, title, description], { clearProps: 'opacity,transform' })
+        gsap.set(
+          [eyebrow, title, description, lampLine, lampGlow].filter(
+            (element): element is HTMLElement => element !== null,
+          ),
+          { clearProps: 'opacity,transform' },
+        )
       }
       motionQuery?.addEventListener('change', settle)
 
@@ -220,6 +260,57 @@ export default function WorksPage() {
 
       if (typeof IntersectionObserver === 'undefined') return
 
+      // —— v2.1 §4.2 签名：计数 ticker 与首屏扫描线 ——
+      // ticker 只写这个 DOM 文本节点（GSAP 的 rAF 驱动），不触发 React 重渲染；
+      // 写 nodeValue 而不是替换 textContent：文本节点仍归 React 所有，卸载时不会因
+      // 引用失效报 removeChild 错误；结束时强制回到真实值，不残留中间数字。
+      const countNumber = countNumberRef.current
+      const writeCountText = (value: number) => {
+        if (!countNumber) return
+        const textNode = countNumber.firstChild
+        const text = String(value).padStart(2, '0')
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) textNode.nodeValue = text
+        else countNumber.textContent = text
+      }
+      let countTween: gsap.core.Tween | null = null
+      if (countNumber && startedAt !== null) {
+        writeCountText(0)
+        const counter = { value: 0 }
+        countTween = gsap.to(counter, {
+          value: works.length,
+          duration: TIMING.ticker,
+          delay: offset(0.24),
+          ease: EASE.out,
+          onUpdate: () => writeCountText(Math.round(counter.value)),
+          onComplete: () => writeCountText(works.length),
+        })
+      }
+
+      // 扫描线：1px accent 渐变高光沿索引线从左扫到右，容器 overflow 裁切避免横向溢出。
+      // 每次会话只播一次；减少动态下不播（数据 effect 开头已提前返回）。
+      const scanStage = root.querySelector<HTMLElement>('[data-scan-stage]')
+      const scanLine = root.querySelector<HTMLElement>('[data-scan-line]')
+      let scanTween: gsap.core.Tween | null = null
+      if (scanStage && scanLine && !directoryScanPlayed) {
+        const lineWidth = scanLine.offsetWidth || 180
+        scanTween = gsap.fromTo(
+          scanLine,
+          { x: -lineWidth },
+          {
+            x: scanStage.offsetWidth,
+            duration: TIMING.scan,
+            delay: startedAt !== null ? offset(0.5) : 0,
+            ease: EASE.out,
+            onComplete: () => {
+              // 播完才记为“已播”，StrictMode 的首次模拟卸载会重播而不是吞掉签名。
+              directoryScanPlayed = true
+              scanTween = null
+              gsap.set(scanLine, { clearProps: 'transform' })
+            },
+          },
+        )
+      }
+
       const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-work-card]'))
       if (cards.length === 0) return
       revealTargets.push(...cards)
@@ -269,11 +360,21 @@ export default function WorksPage() {
       }
 
       const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      const settleSignature = () => {
+        countTween?.kill()
+        countTween = null
+        writeCountText(works.length)
+        scanTween?.kill()
+        scanTween = null
+        if (scanLine) gsap.set(scanLine, { clearProps: 'transform' })
+      }
+
       const showAll = () => {
         if (!motionQuery.matches) return
         observer.disconnect()
         gsap.killTweensOf(revealTargets)
         gsap.set(revealTargets, { clearProps: 'opacity,transform' })
+        settleSignature()
       }
       motionQuery.addEventListener('change', showAll)
 
@@ -282,6 +383,7 @@ export default function WorksPage() {
         motionQuery.removeEventListener('change', showAll)
         gsap.killTweensOf(revealTargets)
         gsap.set(revealTargets, { clearProps: 'opacity,transform' })
+        settleSignature()
       }
     },
     { scope: pageRef, dependencies: [works.length] },
@@ -292,19 +394,24 @@ export default function WorksPage() {
 
   return (
     <div className={styles.page} ref={pageRef}>
-      <PageHeader
-        className={styles.header}
-        eyebrow="SPATIAL COLLECTION / 空间档案"
-        title="全部作品"
-        description="从建筑的细部，到山川的轮廓。以三维视角，收藏真实世界的不同切面。"
-      >
-        {works.length > 0 ? (
-          <p className={styles.collectionCount} data-directory-count>
-            <strong>{String(works.length).padStart(2, '0')}</strong>
-            <span>件公开作品</span>
-          </p>
-        ) : null}
-      </PageHeader>
+      {/* v2.1 §4.2 lamp：绝对定位装饰层，不占布局高度；灯管只在首次进入时展开。 */}
+      <div className={styles.headerStage}>
+        <span className={styles.lampGlow} data-lamp-glow aria-hidden="true" />
+        <span className={styles.lampLine} data-lamp-line aria-hidden="true" />
+        <PageHeader
+          className={styles.header}
+          eyebrow="SPATIAL COLLECTION / 空间档案"
+          title="全部作品"
+          description="从建筑的细部，到山川的轮廓。以三维视角，收藏真实世界的不同切面。"
+        >
+          {works.length > 0 ? (
+            <p className={styles.collectionCount} data-directory-count>
+              <strong ref={countNumberRef}>{String(works.length).padStart(2, '0')}</strong>
+              <span>件公开作品</span>
+            </p>
+          ) : null}
+        </PageHeader>
+      </div>
 
       {isPending ? (
         <div className={styles.state} aria-busy="true">
@@ -344,7 +451,11 @@ export default function WorksPage() {
       ) : null}
 
       {works.length > 0 ? (
-        <>
+        <div className={styles.directoryBody}>
+          {/* 签名扫描线：绝对定位在索引行上，容器 1px + overflow 裁切，不拦截指针。 */}
+          <div className={styles.scanStage} data-scan-stage aria-hidden="true">
+            <span className={styles.scanLine} data-scan-line />
+          </div>
           <div className={styles.directoryMeta} data-directory-index>
             <div className={styles.indexRule} data-directory-index-rule aria-hidden="true" />
             <span>作品索引 <span aria-hidden="true">/</span> 建筑 · 地形 · 空间</span>
@@ -366,7 +477,7 @@ export default function WorksPage() {
               />
             ))}
           </ul>
-        </>
+        </div>
       ) : null}
     </div>
   )

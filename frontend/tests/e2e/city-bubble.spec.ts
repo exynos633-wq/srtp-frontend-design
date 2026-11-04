@@ -81,7 +81,7 @@ test('点击城市打开气泡、移动镜头，关闭后焦点回到点位', as
   const after = await beijing.boundingBox()
   expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeGreaterThan(2)
 
-  const line = page.locator('svg line')
+  const line = page.locator('[data-connector-line]')
   await expect(line).toHaveCSS('visibility', 'visible')
   const lineBox = await line.boundingBox()
   expect(lineBox).not.toBeNull()

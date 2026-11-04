@@ -17,11 +17,15 @@
   --my: 50%;
   /* 让 ::after 光斑确定落在封面与文字之下：光只在负空间（§3.2）。 */
   isolation: isolate;
-  /* 只过渡 transform / 颜色；边框 180ms、释放回正 180ms 都取最近的 --dur-fast（§6）。 */
+  /*
+   * 只过渡 transform / 颜色 / 透明度；边框与 hover 聚焦压暗 180ms 都取最近的 --dur-fast（§6）。
+   * opacity 只用于目录 hover 聚焦（WorksPage.module.css），不参与入场（入场动的是 li）。
+   */
   transition:
     transform var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+    background-color var(--dur-fast) var(--ease-standard),
+    opacity var(--dur-fast) var(--ease-out);
 }
 
 /*
@@ -101,7 +105,14 @@
   height: 100%;
   object-fit: contain;
   padding: 20px;
-  transition: transform var(--dur-base) var(--ease-out);
+  /*
+   * v2.1 §4.2 首排视差：ScrollTrigger 只写 --parallax-y（±6px），这里用独立的 `translate`
+   * 属性合成；hover 缩放走独立的 `scale` 属性。两者分属不同属性、互不覆盖，
+   * 且只有 scale 参与过渡，视差滚动时保持 1:1 跟手。
+   */
+  translate: 0 var(--parallax-y, 0px);
+  scale: 1;
+  transition: scale var(--dur-base) var(--ease-out);
 }
 
 .fallback {
@@ -219,7 +230,7 @@
   }
 
   .card:hover .image {
-    transform: scale(1.02);
+    scale: 1.02;
   }
   .card:hover .arrow {
     background: var(--color-accent);
@@ -281,9 +292,13 @@
   }
 
   .card:hover,
-  .card:active,
-  .card:hover .image {
+  .card:active {
     transform: none;
+  }
+
+  /* 减少动态：不做 hover 缩放，视差也不会创建（JS 门控），保持静态封面。 */
+  .card:hover .image {
+    scale: 1;
   }
 
   /* 减少动态：光边框/光斑不显示，也不参与过渡；只留边框色反馈（§4.5）。 */

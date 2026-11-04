@@ -167,6 +167,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
   const bubbleLayerRef = useRef<HTMLDivElement>(null)
   const bubbleSectionRef = useRef<HTMLElement>(null)
   const connectorRef = useRef<SVGLineElement>(null)
+  const beamRef = useRef<SVGLineElement>(null)
   const bubbleSizeRef = useRef({ width: 0, height: 0 })
   const hoverOpenRef = useRef<number | null>(null)
   const hoverCloseRef = useRef<number | null>(null)
@@ -357,6 +358,12 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
       setPendingCityName(null)
       cameraTweenRef.current?.kill()
       cameraTweenRef.current = null
+      // 关闭时立即收掉连线光点，不等气泡淡出结束。
+      const beam = beamRef.current
+      if (beam) {
+        gsap.killTweensOf(beam)
+        gsap.set(beam, { opacity: 0 })
+      }
 
       const token = closeTokenRef.current + 1
       closeTokenRef.current = token
@@ -776,6 +783,27 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
     )
   }, [bubbleCity, bubbleCityId, reducedMotion])
 
+  // §4.1 连线光点：选中城市时一束 2px 光点 1.2s（SEC.cinema = --dur-beam）从点位跑到气泡，
+  // 跑完即隐去、只留 1px 连接线。端点由 SceneSync 每帧写，补间只改 dashoffset/opacity，
+  // 不读 getTotalLength（pathLength=1 已归一化）。关闭或切城时 kill 并立即隐藏。
+  useEffect(() => {
+    if (!selectedCityId || reducedMotion) return
+    const beam = beamRef.current
+    if (!beam) return
+    gsap.killTweensOf(beam)
+    gsap.set(beam, { opacity: 1, strokeDashoffset: 1 })
+    const tween = gsap.to(beam, {
+      strokeDashoffset: 0,
+      duration: SEC.cinema,
+      ease: EASE.out,
+      onComplete: () => gsap.set(beam, { opacity: 0 }),
+    })
+    return () => {
+      tween.kill()
+      gsap.set(beam, { opacity: 0 })
+    }
+  }, [reducedMotion, selectedCityId])
+
   useEffect(() => {
     const stage = stageRef.current
     if (!stage) return
@@ -1083,6 +1111,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
             bubbleSectionRef={bubbleSectionRef}
             bubbleSizeRef={bubbleSizeRef}
             connectorRef={connectorRef}
+            beamRef={beamRef}
           />
           <Earth reducedMotion={reducedMotion} />
         </Canvas>
@@ -1092,7 +1121,13 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
 
       {bubbleCity && (
         <svg className={styles.connector} aria-hidden="true">
-          <line ref={connectorRef} className={styles.connectorLine} pathLength={1} />
+          <line ref={connectorRef} data-connector-line className={styles.connectorLine} pathLength={1} />
+          <line
+            ref={beamRef}
+            className={styles.connectorBeam}
+            pathLength={1}
+            data-connector-beam="true"
+          />
         </svg>
       )}
 
@@ -1198,6 +1233,7 @@ interface SceneSyncProps {
   bubbleSectionRef: RefObject<HTMLElement | null>
   bubbleSizeRef: RefObject<{ width: number; height: number }>
   connectorRef: RefObject<SVGLineElement | null>
+  beamRef: RefObject<SVGLineElement | null>
 }
 
 /** 唯一写相机的位置；GSAP/控制器只改 viewRef，逐帧不触发 React 状态更新。 */
@@ -1211,6 +1247,7 @@ function SceneSync({
   bubbleSectionRef,
   bubbleSizeRef,
   connectorRef,
+  beamRef,
 }: SceneSyncProps) {
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
@@ -1271,12 +1308,14 @@ function SceneSync({
 
     const layer = bubbleLayerRef.current
     const line = connectorRef.current
+    const beam = beamRef.current
     if (!layer || !line) return
     const point = bubbleCityId ? screenPositionsRef.current.get(bubbleCityId) : null
     const bubble = bubbleSizeRef.current
     if (!point?.front || !bubbleCityId || bubble.width < 1 || bubble.height < 1) {
       layer.style.visibility = 'hidden'
       line.style.visibility = 'hidden'
+      if (beam) beam.style.visibility = 'hidden'
       return
     }
 
@@ -1294,6 +1333,7 @@ function SceneSync({
     if (!placement) {
       layer.style.visibility = 'hidden'
       line.style.visibility = 'hidden'
+      if (beam) beam.style.visibility = 'hidden'
       return
     }
 
@@ -1310,6 +1350,14 @@ function SceneSync({
     line.setAttribute('y1', String(point.y))
     line.setAttribute('x2', String(placement.lineX + safeLeft))
     line.setAttribute('y2', String(placement.lineY))
+    // 光点与主连接线共用同一组端点，避免两套 placement 计算。
+    if (beam) {
+      beam.style.visibility = 'visible'
+      beam.setAttribute('x1', String(point.x))
+      beam.setAttribute('y1', String(point.y))
+      beam.setAttribute('x2', String(placement.lineX + safeLeft))
+      beam.setAttribute('y2', String(placement.lineY))
+    }
   })
 
   return null

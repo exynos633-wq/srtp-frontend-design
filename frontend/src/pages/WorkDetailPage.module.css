@@ -62,6 +62,25 @@
 }
 
 /*
+ * §4.3「pin 70vh」的低风险等价：桌面且视口够高时，阅读长信息列期间观看框吸顶。
+ * .page/.main 均无 overflow 祖先，sticky 不会被剪裁；窄屏/矮屏保持原状不吸顶。
+ * sticky 自带层叠上下文（z 自动，仍在导航与颗粒之下）；放大查看打开时整列抬到
+ * 浮层层级，保证 fixed 遮罩/对话框（--z-overlay/--z-modal）仍盖住导航。
+ */
+@media (min-width: 1024px) and (min-height: 760px) {
+  .viewerColumn {
+    position: sticky;
+    /* 导航是普通文档流（非 fixed），滚走后无需给它留位。 */
+    top: var(--space-4);
+    align-self: start;
+  }
+
+  .viewerColumn:has([role='dialog']) {
+    z-index: var(--z-overlay);
+  }
+}
+
+/*
  * 观看框「上台」（§4.3）：entered 时一次性 700ms（--dur-scene 600ms + 100ms 编排增量），
  * 只写 transform / opacity；默认态不藏，SSR 与无 JS 时直接可见。
  * 透视放在 keyframes 的 transform 里而不是父级 perspective：perspective/transform 会让
@@ -140,6 +159,18 @@
   color: var(--color-text-muted);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
+  /* 3s 呼吸光（2.5 × --dur-cinema）：只动透明度，边框与文字颜色不动（§4.3）。 */
+  animation: like-breathe calc(var(--dur-cinema) * 2.5) var(--ease-standard) infinite alternate;
+}
+
+@keyframes like-breathe {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 0.8;
+  }
 }
 
 .likeIcon {
@@ -222,9 +253,13 @@
   }
 }
 
-/* 减少动态：观看框不播透视上台，直接显示（§4.5）。 */
+/* 减少动态：观看框不播透视上台、点赞不呼吸，直接显示（§4.5）。 */
 @media (prefers-reduced-motion: reduce) {
   .viewerRise[data-entered='true'] {
+    animation: none;
+  }
+
+  .likePlaceholder {
     animation: none;
   }
 }
