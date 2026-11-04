@@ -9,6 +9,7 @@ const STATUS_LABELS: Record<WorkStatus, string> = {
 const FORMAT_LABELS: Record<ModelFormat, string> = {
   glb: 'GLB',
   'gaussian-ply': '高斯 PLY',
+  'mesh-ply': '网格 PLY',
 }
 
 export function workStatusLabel(status: WorkStatus): string {

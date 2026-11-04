@@ -88,7 +88,7 @@ test('P14 完整演示：新建→模拟资源→发布→城市/目录→清空
   await expect(page.getByRole('heading', { name: '新建作品' })).toBeVisible()
   await expect(page.getByRole('button', { name: '发布作品' })).toBeDisabled()
   await expect(page.getByText('开发 Mock · 非真实接口')).toBeVisible()
-  await expect(page.getByText(/仅开发环境的上传模拟/)).toBeVisible()
+  await expect(page.getByText(/开发模拟上传：只传文件名/)).toBeVisible()
 
   const name = 'P14 演示冻结作品'
   const description = 'P14 完整演示：模拟上传、城市切换与发布下架。'

@@ -11,12 +11,25 @@ import type { UploadSimulationAsset } from '../../src/types/upload'
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
   get: vi.fn(),
+  simulated: vi.fn(() => true),
+  liveUpload: vi.fn(),
+  liveGet: vi.fn(),
 }))
 
 vi.mock('../../src/api/mockUploads', () => ({
   startMockUpload: mocks.start,
   getMockUpload: mocks.get,
+  isUploadSimulationEnabled: mocks.simulated,
 }))
+
+vi.mock('../../src/api/uploads', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/api/uploads')>()
+  return {
+    ...actual,
+    uploadAsset: mocks.liveUpload,
+    getUploadAsset: mocks.liveGet,
+  }
+})
 
 function asset(
   overrides: Partial<UploadSimulationAsset> = {},
@@ -66,6 +79,10 @@ const revokeObjectUrl = vi.fn()
 beforeEach(() => {
   mocks.start.mockReset()
   mocks.get.mockReset()
+  mocks.simulated.mockReset()
+  mocks.simulated.mockReturnValue(true)
+  mocks.liveUpload.mockReset()
+  mocks.liveGet.mockReset()
   createObjectUrl.mockReset()
   revokeObjectUrl.mockReset()
   let counter = 0
@@ -260,6 +277,36 @@ describe('P12 模拟上传请求身份与资源清理', () => {
     })
     expect(result.current.cover.selection?.status).toBe('receiving')
     expect(result.current.cover.selection?.assetId).toBeNull()
+  })
+
+  it('Mock 关闭时使用正式 multipart 上传并保留真实进度', async () => {
+    mocks.simulated.mockReturnValue(false)
+    const pending = deferred<UploadSimulationAsset>()
+    mocks.liveUpload.mockImplementation(
+      (
+        _file: File,
+        _kind: string,
+        options: { onProgress?: (percent: number) => void },
+      ) => {
+        options.onProgress?.(64)
+        return pending.promise
+      },
+    )
+    const { result } = renderUploadHook(() => useMockUpload('model'))
+
+    act(() => result.current.selectFile(file('demo.glb')))
+    await waitFor(() => expect(result.current.selection?.status).toBe('receiving'))
+
+    expect(result.current.mode).toBe('live')
+    expect(result.current.selection?.progress).toBe(64)
+    expect(mocks.start).not.toHaveBeenCalled()
+
+    await act(async () => {
+      pending.resolve(asset({ assetId: 'asset_live', status: 'ready' }))
+    })
+    await waitFor(() => expect(result.current.readyAssetId).toBe('asset_live'))
+    expect(result.current.selection?.progress).toBe(100)
+    expect(mocks.liveGet).not.toHaveBeenCalled()
   })
 
   it('卸载会中止进行中的模拟请求', () => {

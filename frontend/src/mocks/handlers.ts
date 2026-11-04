@@ -171,6 +171,37 @@ function toWriteResult(work: MockWork): AdminWork {
   return toAdminWork(work)
 }
 
+/** 与 feature/backend-client-rendering 的 preview-config 响应保持一致。 */
+function previewConfig(id: string, admin: boolean) {
+  const work = findAdminWork(id)
+  if (!work || !work.modelAssetId) {
+    return fail(404, 'NO_MODEL', '该作品尚未配置可用的模型资源。')
+  }
+  const base = admin
+    ? `/api/admin/works/${encodeURIComponent(id)}/model`
+    : `/api/works/${encodeURIComponent(id)}/model`
+  return HttpResponse.json({
+    workId: work.id,
+    mode: 'client',
+    source: {
+      kind: 'url',
+      url: `${base}?v=${encodeURIComponent(work.modelAssetId)}`,
+      version: work.modelAssetId,
+      name: work.name ?? '',
+      format: work.modelFormat ?? 'glb',
+    },
+    view: {
+      sourceUp: work.modelFormat === 'glb' ? 'y' : 'z',
+      orientation: { x: 0, y: 0, z: 0 },
+      scale: 1,
+      initialCamera: null,
+      ground: null,
+      walkArea: null,
+      eyeHeight: null,
+    },
+  })
+}
+
 export const handlers = [
   http.get(/\/api\/works$/, () => {
     const scenario = getMockScenario()
@@ -187,6 +218,18 @@ export const handlers = [
     const work = findPublicWork(id)
     if (!work) return fail(404, 'WORK_NOT_FOUND', '作品不存在或未公开。')
     return HttpResponse.json(withCoverScenario(work))
+  }),
+
+  http.get(/\/api\/works\/([^/]+)\/preview-config$/, ({ params }) => {
+    const id = String(params[0])
+    if (!findPublicWork(id)) return fail(404, 'WORK_NOT_FOUND', '作品不存在或未公开。')
+    return previewConfig(id, false)
+  }),
+
+  http.get(/\/api\/admin\/works\/([^/]+)\/preview-config$/, ({ params }) => {
+    const session = requireSession()
+    if (session instanceof Response) return session
+    return previewConfig(String(params[0]), true)
   }),
 
   http.get(/\/api\/globe\/cities$/, () => {

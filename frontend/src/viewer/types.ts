@@ -33,7 +33,7 @@ export type ViewerPhase =
 
 export type ViewerMode = 'orbit' | 'fly' | 'walk'
 
-/** 源文件坐标系。GLB 标准为 Y-up；3DGS PLY 默认按 Z-up 原样展示。 */
+/** 源文件坐标系。GLB 标准为 Y-up；PLY（网格/3DGS）无统一方向，默认按 Z-up 展示。 */
 export type SourceUp = 'y' | 'z'
 
 export interface WalkArea {
