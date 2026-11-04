@@ -1,0 +1,81 @@
+/*
+ * 扫描式加载态（动效设计 v2.1 §4.4）：静态网格 + 1px accent 扫描线往复。
+ * 只动 transform/opacity；减少动态下扫描线停走，保留网格与文字。
+ */
+.loader {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: var(--space-3);
+  width: min(360px, 100%);
+  --scan-travel: 131px;
+  min-height: 132px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+  background: rgb(8 13 18 / 72%);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: center;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgb(198 226 230 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(198 226 230 / 6%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+.scan {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(84 200 193 / 55%) 20%,
+    var(--color-accent) 50%,
+    rgb(84 200 193 / 55%) 80%,
+    transparent 100%
+  );
+  animation: scan-line calc(var(--dur-cinema) * 1.333) ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+}
+
+.compact {
+  width: 100%;
+  --scan-travel: 95px;
+  min-height: 96px;
+  padding: var(--space-4);
+  background: rgb(8 13 18 / 64%);
+}
+
+@keyframes scan-line {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(var(--scan-travel, 131px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan {
+    animation: none;
+    opacity: 0.7;
+  }
+}

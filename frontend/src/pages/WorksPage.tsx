@@ -7,6 +7,7 @@ import { queryKeys } from '../api/queryKeys'
 import { Button } from '../components/ui/Button'
 import { PageHeader } from '../components/ui/PageHeader'
 import { StatusMessage } from '../components/ui/StatusMessage'
+import { ScanLoader } from '../components/fx/ScanLoader'
 import { WorkCard, type WorkCardOpenSource } from '../components/works/WorkCard'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
 import { EASE, SEC } from '../lib/motion'
@@ -415,7 +416,8 @@ export default function WorksPage() {
 
       {isPending ? (
         <div className={styles.state} aria-busy="true">
-          <StatusMessage tone="info">正在读取作品…</StatusMessage>
+          {/* §4.4 扫描 loader：唯一 role="status"；骨架屏 aria-hidden 不重复播报。 */}
+          <ScanLoader label="正在读取作品…" compact />
           <DirectorySkeleton />
         </div>
       ) : null}

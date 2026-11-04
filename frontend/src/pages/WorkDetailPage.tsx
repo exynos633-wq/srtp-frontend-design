@@ -8,6 +8,7 @@ import { queryKeys } from '../api/queryKeys'
 import { isApiError } from '../api/http'
 import { Button } from '../components/ui/Button'
 import { StatusMessage } from '../components/ui/StatusMessage'
+import { ScanLoader } from '../components/fx/ScanLoader'
 import { PreviewViewer } from '../components/works/PreviewViewer'
 import { resolvePreviewConfig } from '../viewer/workModelSource'
 import { classNames } from '../lib/classNames'
@@ -126,7 +127,8 @@ function WorkDetailContent({ id }: { id?: string }) {
 
       {isPending && !notFound && !displayedWork ? (
         <div className={styles.stateBlock} aria-busy="true">
-          <StatusMessage tone="info">正在读取作品信息与封面…</StatusMessage>
+          {/* §4.4 扫描 loader：替代脉冲式状态行，减少动态下为静态网格 + 标签。 */}
+          <ScanLoader label="正在读取作品信息与封面…" compact />
         </div>
       ) : null}
 

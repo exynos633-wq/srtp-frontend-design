@@ -33,44 +33,18 @@
   line-height: var(--leading-meta);
 }
 
+/*
+ * 场景加载态定位容器（§4.4）：视觉（网格/扫描线/边框/标签）全部来自 ScanLoader，
+ * 这里只负责在场景内居中，不拦截地球拖拽。
+ */
 .pending {
   position: absolute;
   top: 50%;
   left: 50%;
   z-index: 4;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  background: rgb(8 13 18 / 74%);
-  color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
+  width: min(340px, calc(100% - 32px));
   transform: translate(-50%, -50%);
   pointer-events: none;
-  backdrop-filter: blur(10px);
-}
-
-.pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-
-  50% {
-    opacity: 1;
-  }
 }
 
 .loading {
@@ -254,11 +228,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse {
-    animation: none;
-    opacity: 1;
-  }
-
   /* 减少动态：标题光扫/CTA 旋转全部不播；光环停为静态弧光。 */
   .sweep {
     display: none;
@@ -479,4 +448,13 @@
   .eyebrow { margin-bottom: 22px; }
   .heroLink { min-height: 48px; font-size: 14px; }
   .page::after { bottom: 80px; left: 24px; right: 24px; }
+
+  /*
+   * 手机小字号下收敛标题光扫：光带更窄（JS 同时把行程/峰值减半），
+   * 避免 120px 光带在 44px 标题上盖住正文；reduced 下仍由上方媒体查询整层停播。
+   */
+  .sweep { width: 72px; }
+
+  /* 场景加载态在 320/390 留出左右呼吸，不贴边。 */
+  .pending { width: min(300px, calc(100% - 32px)); }
 }

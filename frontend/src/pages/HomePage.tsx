@@ -9,6 +9,7 @@ import { isMocksActive } from '../app/mocksStatus'
 import { MockBadge } from '../mocks/MockBadge'
 import { AmbientLights } from '../components/fx/AmbientLights'
 import { Magnetic } from '../components/fx/Magnetic'
+import { ScanLoader } from '../components/fx/ScanLoader'
 import { Button } from '../components/ui/Button'
 import { DUR, EASE, SEC } from '../lib/motion'
 import { usePrefersReducedMotion } from '../lib/usePrefersReducedMotion'
@@ -92,8 +93,11 @@ export function HomePage() {
       const link = page.querySelector<HTMLElement>('[data-home-link]')
       const meta = page.querySelector<HTMLElement>('[data-home-meta]')
       // §4 手机：除标题外位移减半；标题揭示幅度不缩。
-      const shift =
-        window.matchMedia?.('(max-width: 767px)').matches === true ? 0.5 : 1
+      const compact = window.matchMedia?.('(max-width: 767px)').matches === true
+      const shift = compact ? 0.5 : 1
+      // §4.1 手机：小字号下光带更易抢正文，光扫行程/峰值强度减半（reduced 仍完全不播）。
+      const sweepTravel = compact ? 0.15 : 0.3
+      const sweepPeak = compact ? 0.2 : 0.35
 
       const timeline = gsap.timeline({ defaults: { ease: EASE.out } })
       if (nav) {
@@ -144,9 +148,9 @@ export function HomePage() {
         const lineWidth = () => line.getBoundingClientRect().width
         timeline.fromTo(
           sweep,
-          { x: () => -0.3 * lineWidth() },
+          { x: () => -sweepTravel * lineWidth() },
           {
-            x: () => 1.3 * lineWidth(),
+            x: () => (1 + sweepTravel) * lineWidth(),
             duration: toSeconds(LIGHT_MS.sweep),
             ease: EASE.out,
           },
@@ -155,7 +159,7 @@ export function HomePage() {
         timeline.fromTo(
           sweep,
           { opacity: 0 },
-          { opacity: 0.35, duration: SEC.base, ease: EASE.out },
+          { opacity: sweepPeak, duration: SEC.base, ease: EASE.out },
           sweepAt,
         )
         timeline.to(
@@ -330,10 +334,10 @@ export function HomePage() {
 
 function ScenePending() {
   return (
-    <p className={styles.pending} role="status">
-      <span className={styles.pulse} aria-hidden="true" />
-      正在加载地球场景…
-    </p>
+    // ScanLoader 自带唯一的 role="status"；这里只负责在场景内居中，不叠加状态语义。
+    <div className={styles.pending}>
+      <ScanLoader label="正在加载地球场景…" compact />
+    </div>
   )
 }
 

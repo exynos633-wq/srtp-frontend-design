@@ -19,9 +19,11 @@
   outline: none;
 }
 
-.fallback {
+.suspense {
+  display: grid;
+  min-height: 60vh;
+  place-items: center;
   padding: var(--space-10) var(--page-padding);
-  color: var(--color-text-secondary);
 }
 
 .footer {
