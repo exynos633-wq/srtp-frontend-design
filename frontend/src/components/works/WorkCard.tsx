@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router'
 import { usePointerGlow } from '../../lib/lightField'
-import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion'
 import type { ModelFormat } from '../../types/work'
 import styles from './WorkCard.module.css'
 
@@ -48,6 +48,7 @@ export function WorkCard({
   // 指针位置写进整卡链接的 --mx/--my，供 ::before 1px 光边框与 ::after 首排光斑读取；
   // 钩子自带 hover / 减少动态门控（动效设计 v2.1 §5.3）。
   const cardRef = usePointerGlow<HTMLAnchorElement>()
+  const reducedMotion = usePrefersReducedMotion()
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
 
@@ -64,7 +65,7 @@ export function WorkCard({
     if (!isFeatured || !hasCover) return
     const image = imageRef.current
     if (!image || typeof window.matchMedia !== 'function') return
-    if (prefersReducedMotion() || window.matchMedia('(max-width: 767px)').matches) return
+    if (reducedMotion || window.matchMedia('(max-width: 767px)').matches) return
 
     let cancelled = false
     let teardown: (() => void) | null = null
@@ -100,7 +101,7 @@ export function WorkCard({
       cancelled = true
       teardown?.()
     }
-  }, [isFeatured, hasCover])
+  }, [isFeatured, hasCover, reducedMotion])
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     // 只记录普通左键同页导航；组合键、中键和新标签页保持浏览器默认行为。

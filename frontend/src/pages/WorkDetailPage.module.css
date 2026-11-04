@@ -85,14 +85,14 @@
  * 只写 transform / opacity；默认态不藏，SSR 与无 JS 时直接可见。
  * 透视放在 keyframes 的 transform 里而不是父级 perspective：perspective/transform 会让
  * 祖先成为 fixed 定位的包含块，而放大查看（PreviewViewer .zoomed）依赖视口定位；
- * to 帧的 transform:none 也让动画结束后不再残留包含块。
+ * 不保留动画填充，确保动画结束后不再残留 fixed 包含块。
  */
 .viewerRise {
   transform-origin: 50% 18%;
 }
 
 .viewerRise[data-entered='true'] {
-  animation: viewer-rise calc(var(--dur-scene) + 100ms) var(--ease-out) both;
+  animation: viewer-rise calc(var(--dur-scene) + 100ms) var(--ease-out);
 }
 
 @keyframes viewer-rise {
