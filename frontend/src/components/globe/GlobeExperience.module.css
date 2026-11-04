@@ -7,8 +7,8 @@
   cursor: grab;
   outline: none;
   background:
-    radial-gradient(circle at 45% 50%, rgb(13 29 39 / 92%) 0 24%, rgb(13 29 39 / 0%) 58%),
-    radial-gradient(circle at 45% 50%, rgb(8 13 18 / 0%) 34%, rgb(8 13 18 / 82%) 78%);
+    radial-gradient(circle at 66% 50%, rgb(13 29 39 / 92%) 0 24%, rgb(13 29 39 / 0%) 58%),
+    radial-gradient(circle at 66% 50%, rgb(8 13 18 / 0%) 34%, rgb(8 13 18 / 82%) 78%);
 }
 
 .stage:active {
@@ -19,6 +19,86 @@
   outline: 2px solid var(--color-focus);
   outline-offset: -4px;
   box-shadow: none;
+}
+
+.cartography {
+  position: absolute;
+  container-type: size;
+  inset: 0;
+  overflow: hidden;
+  color: var(--color-silver);
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 9% 17%, currentColor 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 29% 12%, currentColor 0 .6px, transparent 1.2px),
+    radial-gradient(circle at 41% 23%, currentColor 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 15% 78%, currentColor 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 34% 83%, currentColor 0 .6px, transparent 1.2px),
+    radial-gradient(circle at 46% 9%, currentColor 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 91% 19%, currentColor 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 97% 42%, currentColor 0 .6px, transparent 1.2px),
+    radial-gradient(circle at 93% 75%, currentColor 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 79% 89%, currentColor 0 .6px, transparent 1.2px);
+}
+
+.orbits {
+  position: absolute;
+  top: 50%;
+  left: 66%;
+  width: min(1104px, 70.8cqw, 100.8cqh);
+  height: auto;
+  overflow: visible;
+  transform: translate(-50%, -50%);
+  stroke: currentColor;
+  stroke-width: .8;
+}
+
+.orbitTrack {
+  opacity: .18;
+}
+
+.orbitSegments {
+  opacity: .18;
+  stroke-dasharray: 52 220;
+}
+
+.orbitTicks {
+  opacity: .35;
+}
+
+.orbitMarkers {
+  stroke: var(--color-accent);
+  opacity: .6;
+}
+
+.terrain {
+  position: absolute;
+  bottom: 90px;
+  left: 0;
+  width: min(40%, 560px);
+  height: 130px;
+  stroke: currentColor;
+  stroke-width: .7;
+  opacity: .14;
+  mask-image: linear-gradient(0deg, transparent, #000 35%, #000 65%, transparent), linear-gradient(90deg, #000, transparent);
+  mask-composite: intersect;
+}
+
+.mapCaption {
+  position: absolute;
+  top: 112px;
+  right: 3.8%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 12px;
+  border-right: 1px solid var(--color-accent);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: .16em;
+  text-align: right;
 }
 
 .canvas {
@@ -37,7 +117,7 @@
   z-index: 1;
   pointer-events: none;
   background: radial-gradient(
-    ellipse at 45% 50%,
+    ellipse at 66% 50%,
     rgb(8 13 18 / 0%) 48%,
     rgb(8 13 18 / 42%) 84%,
     rgb(8 13 18 / 68%) 100%
@@ -186,7 +266,24 @@
   border: 0;
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .orbits {
+    width: min(66cqw, 91.2cqh);
+  }
+}
+
 @media (max-width: 767px) {
+  .orbits {
+    top: 45%;
+    left: 50%;
+    width: min(110.4cqw, 103.2cqh);
+  }
+
+  .terrain,
+  .mapCaption {
+    display: none;
+  }
+
   .stage {
     background:
       radial-gradient(circle at 50% 42%, rgb(13 29 39 / 92%) 0 22%, rgb(13 29 39 / 0%) 58%),
@@ -228,4 +325,19 @@
   .dot {
     transition: none;
   }
+}
+
+.hint {
+  left: 3.8%;
+  bottom: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+@media (max-width: 767px) {
+  .hint { bottom: 100px; left: 50%; }
 }

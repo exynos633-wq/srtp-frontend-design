@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -55,7 +56,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     expect(initial.autoRotate.enabled).toBe(true)
 
     const downloadPromise = page.waitForEvent('download', { timeout: 60_000 })
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(1200)
     const started = await page.evaluate(() => window.__srtpModelViewer!.getDebugState())
     expect(started.recording).not.toBeNull()
@@ -68,7 +69,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     )
     expect(started.autoRotate.enabled).toBe(true)
     expect(started.recording!.liveTracks).toBe(1)
-    await expect(page.getByRole('button', { name: '停止录制' })).toBeVisible()
+    await expect((await viewerMenuItem(page, '停止录制'))).toBeVisible()
     await expect(page.getByText(/录制中 \d/)).toBeVisible()
 
     await page.waitForTimeout(2500)
@@ -224,7 +225,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
     const noDownload = page.waitForEvent('download', { timeout: 1200 }).catch(() => null)
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(1200)
     await page.evaluate(() => {
       const viewer = window.__srtpModelViewer as unknown as {
@@ -274,7 +275,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
     const originalName = (await page.evaluate(() => window.__srtpModelViewer!.getDebugState().info?.sourceName)) ?? ''
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(800)
     const noDownload = page.waitForEvent('download', { timeout: 2200 }).catch(() => null)
     const result = await page.evaluate(async () => {
@@ -319,7 +320,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(900)
     const noDownload = page.waitForEvent('download', { timeout: 1800 }).catch(() => null)
     const result = await page.evaluate(async () => {
@@ -348,7 +349,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(1000)
     const busy = await page.evaluate(async () => {
       const viewer = window.__srtpModelViewer as unknown as {
@@ -370,7 +371,7 @@ test.describe('35 秒真实录制与提前结束', () => {
       await viewer.stopRecording('end')
     })
 
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(800)
     const downloadPromise = page.waitForEvent('download', { timeout: 1800 }).catch(() => null)
     await page.evaluate(() => {
@@ -390,7 +391,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(2200)
     const downloadPromise = page.waitForEvent('download', { timeout: 1200 }).catch(() => null)
     await page.evaluate(() => {
@@ -426,7 +427,7 @@ test.describe('35 秒真实录制与提前结束', () => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await openReady(page)
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(1500)
     const downloadPromise = page.waitForEvent('download', { timeout: 1500 }).catch(() => null)
     await page.getByRole('link', { name: '返回全部作品' }).click()

@@ -35,9 +35,12 @@ export function HomePage() {
       data-home-page="true"
       data-home-webgl={webglAvailable ? 'true' : 'false'}
     >
-      <h1 id="home-title" className={styles.srOnly}>
-        从城市进入建筑模型
-      </h1>
+      <div className={styles.hero}>
+        <p className={styles.eyebrow}>A NEW PERSPECTIVE</p>
+        <h1 id="home-title" className={styles.heroTitle}><span>低空之上</span><span>另见世界</span></h1>
+        <p className={styles.subtitle}>以三维视角，探索建筑与山川</p>
+        <Link className={styles.heroLink} to="/works">浏览全部作品 <span aria-hidden="true">→</span></Link>
+      </div>
 
       <div className={styles.scene} data-home-scene="true">
         {webglAvailable ? (
@@ -52,7 +55,7 @@ export function HomePage() {
 
         <div className={styles.meta}>
           <MockBadge />
-          {webglAvailable && <p>演示地球 · 正式地理素材待接入</p>}
+          {webglAvailable && <p>地球影像：NASA Blue Marble</p>}
           {webglAvailable && isMocksActive() && (
             <p>城市坐标为 Mock 演示数据，待正式字典替换</p>
           )}
@@ -114,7 +117,7 @@ function GlobeFallback() {
       <p className={styles.fallbackEyebrow}>三维场景不可用</p>
       <h2 className={styles.fallbackTitle}>当前浏览器无法显示地球场景</h2>
       <p className={styles.fallbackText}>
-        导航与完整作品目录不受影响。正式地球素材与真实地理效果尚未接入，这里不会用静态图伪装成可交互地球。
+        导航与完整作品目录不受影响。你仍可通过作品目录浏览建筑与地形模型。
       </p>
       <Link className={styles.fallbackLink} to="/works">
         前往全部作品

@@ -19,20 +19,25 @@
 /* 手机：品牌行 + 导航行，实色，不折叠菜单（规范 §4.2）。 */
 .bar {
   display: grid;
-  grid-template-rows: var(--mobile-brand-height) var(--mobile-nav-row);
+  grid-template-rows: 48px var(--mobile-nav-row);
+  grid-template-columns: 1fr auto;
   padding: 0 var(--page-padding);
 }
 
 .brand {
+  font-family: var(--font-display);
+  font-size: 25px;
+  letter-spacing: .1em;
   display: flex;
   align-items: center;
   color: var(--color-text);
-  font-size: var(--text-heading);
   line-height: var(--leading-heading);
-  font-weight: var(--weight-heading);
+  font-weight: 800;
 }
 
 .nav {
+  grid-row: 2;
+  grid-column: 1 / -1;
   min-width: 0;
 }
 
@@ -93,7 +98,7 @@
 
 @media (min-width: 768px) {
   .bar {
-    grid-template-rows: var(--nav-height);
+    grid-template-rows: var(--public-nav-height);
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
   }
@@ -104,6 +109,7 @@
 
   .nav {
     grid-column: 2;
+    grid-row: 1;
     height: 100%;
   }
 
@@ -123,3 +129,20 @@
     width: calc(100% - var(--space-4));
   }
 }
+.admin {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  .admin {
+    grid-column: 3;
+  }
+}
+
+@media (min-width: 768px) { .bar { padding: 0 3.8%; } }

@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 import { expect, test, type Page } from '@playwright/test'
 
 const directoryCards = (page: Page) => page.locator('a[href^="/works/"]')
@@ -105,7 +106,7 @@ test('详情未开始时只有封面，不请求完整模型或创建预览会�
   await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
 
   const modelOrPreview = requests.filter(
-    (url) => /\.(glb|ply)(\?|$)/.test(url) || url.includes('/api/preview'),
+    (url) => /\.(glb|ply)(\?|$)/.test(url) || new URL(url).pathname.startsWith('/api/preview'),
   )
   expect(modelOrPreview).toEqual([])
 })
@@ -117,11 +118,11 @@ test('预览状态机：开始后真实加载、结束卸载与重新开始不�
   await expect(page.locator('[data-viewer-phase]')).toHaveCount(1, { timeout: 15_000 })
   await expect(page.getByRole('button', { name: '开始预览' })).toHaveCount(0)
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
-  await expect(page.getByRole('button', { name: '复位视角' })).toBeEnabled()
-  await expect(page.getByRole('button', { name: '放大查看' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '复位视角', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '放大查看', exact: true })).toBeEnabled()
   await expect(page.locator('section[aria-label="模型观看区"]')).toHaveCount(1)
 
-  await page.getByRole('button', { name: '结束预览' }).click()
+  await (await viewerMenuItem(page, '结束预览')).click()
   await expect(page.getByText(/观看实例已释放/).first()).toBeVisible()
   await expect(page.locator('[data-viewer-canvas]')).toHaveCount(0)
   await page.waitForTimeout(800)
@@ -137,10 +138,10 @@ test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预�
   await page.getByRole('button', { name: '开始预览' }).click()
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
 
-  await page.getByRole('button', { name: '放大查看' }).click()
+  await page.getByRole('button', { name: '放大查看', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '放大查看：院落模型' })
   await expect(dialog).toBeVisible()
-  await expect(page.getByRole('button', { name: '恢复常规查看' })).toBeFocused()
+  await expect(page.locator('[data-action="close-zoom"]')).toBeFocused()
   await expect(page.locator('section[aria-label^="放大查看"]')).toHaveCount(1)
   // 焦点循环包含 new input/select 等可聚焦控件，Shift+Tab 不能离开对话框。
   await page.keyboard.press('Shift+Tab')
@@ -150,7 +151,7 @@ test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预�
 
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '放大查看' })).toBeFocused()
+  await expect(page.getByRole('button', { name: '放大查看', exact: true })).toBeFocused()
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
 })
 
@@ -300,7 +301,7 @@ test('目录悬停只读取元数据，不下载模型或创建预览会话', as
   await page.waitForTimeout(400)
 
   const modelOrPreview = requests.filter(
-    (url) => /\.(glb|ply)(\?|$)/.test(url) || url.includes('/api/preview'),
+    (url) => /\.(glb|ply)(\?|$)/.test(url) || new URL(url).pathname.startsWith('/api/preview'),
   )
   expect(modelOrPreview).toEqual([])
 })

@@ -12,11 +12,13 @@ import { resetMockState } from '../../src/mocks/scenario'
 
 vi.mock('../../src/components/viewer/ModelViewport', () => import('./support/ModelViewportStub'))
 vi.mock('../../src/viewer/workModelSource', () => ({
-  resolveWorkModelSource: async (workId: string) => ({
+  resolvePreviewConfig: async (workId: string) => ({
+    workId, mode: 'client', view: {}, source: {
     kind: 'url' as const,
     url: `/__test/models/${workId}.glb`,
     version: `test-${workId}`,
     name: workId,
+    },
   }),
 }))
 

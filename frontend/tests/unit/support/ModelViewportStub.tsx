@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { ModelInfo } from '../../../src/viewer/types'
+import type { RemotePreview } from '../../../src/api/preview'
 
 /**
  * DOM 单测替身：只验证观看外壳的挂载/卸载与边界，不伪造 WebGL 帧。
@@ -7,6 +8,8 @@ import type { ModelInfo } from '../../../src/viewer/types'
  */
 export function ModelViewport(props: {
   source: unknown
+  remote?: RemotePreview | null
+  onRemoteFailure?: (error: unknown) => void
   modelName: string
   onPhase?: (phase: 'read' | 'initialize' | 'ready' | 'error') => void
   onError?: (error: unknown) => void
@@ -14,9 +17,9 @@ export function ModelViewport(props: {
   onZoom?: () => void
   showEnd?: boolean
 }) {
-  const { source, modelName, onPhase, onError, onEnd, onZoom } = props
+  const { source, remote, modelName, onPhase, onError, onEnd, onZoom } = props
   useEffect(() => {
-    if (source) onPhase?.('ready')
+    if (source || remote) onPhase?.('ready')
     else {
       onPhase?.('error')
       onError?.({
@@ -27,11 +30,13 @@ export function ModelViewport(props: {
         retryable: false,
       })
     }
-  }, [source, onError, onPhase])
+  }, [source, remote, onError, onPhase])
 
   return (
-    <div data-testid="model-viewport-stub">
+    <div data-testid="model-viewport-stub" data-remote={remote ? 'true' : 'false'}>
+      {remote ? <button onClick={() => props.onRemoteFailure?.(new Error('测试断流'))}>协议桩：断流</button> : null}
       <p>{source ? `真实查看器测试替身 · ${modelName}` : '尚未配置模型资源（测试替身）'}</p>
+      <button type="button" data-action="more">更多</button>
       {onZoom ? (
         <button type="button" data-action="zoom" aria-label="放大查看" onClick={onZoom}>
           放大查看

@@ -147,10 +147,13 @@ export default function WorksPage() {
   return (
     <div className={styles.page} ref={pageRef}>
       <PageHeader
-        eyebrow="公开目录"
+        className={styles.header}
+        eyebrow="SPATIAL COLLECTION / 空间档案"
         title="全部作品"
-        description="按发布时间排序，一次展示全部已发布作品。城市选填，未设置城市不影响查看。"
-      />
+        description="从建筑的细部，到山川的轮廓。以三维视角，收藏真实世界的不同切面。"
+      >
+        {works.length > 0 ? <p className={styles.collectionCount}><strong>{String(works.length).padStart(2, '0')}</strong><span>件公开作品</span></p> : null}
+      </PageHeader>
 
       {isPending ? (
         <div className={styles.state} aria-busy="true">
@@ -190,19 +193,28 @@ export default function WorksPage() {
       ) : null}
 
       {works.length > 0 ? (
-        <ul className={styles.grid} aria-label="已发布作品">
-          {works.map((work) => (
-            <WorkCard
-              key={work.id}
-              workId={work.id}
-              href={`/works/${work.id}`}
-              title={work.name}
-              cityName={work.city?.name ?? null}
-              coverUrl={work.coverUrl}
-              onOpen={handleOpen}
-            />
-          ))}
-        </ul>
+        <>
+          <div className={styles.directoryMeta}>
+            <span>作品索引 <span aria-hidden="true">/</span> 建筑 · 地形 · 空间</span>
+            <span>按发布时间排序</span>
+          </div>
+          <ul className={styles.grid} aria-label="已发布作品">
+            {works.map((work, index) => (
+              <WorkCard
+                key={work.id}
+                workId={work.id}
+                href={`/works/${work.id}`}
+                title={work.name}
+                cityName={work.city?.name ?? null}
+                coverUrl={work.coverUrl}
+                index={index + 1}
+                description={index === 0 ? work.description : undefined}
+                modelFormat={work.modelFormat}
+                onOpen={handleOpen}
+              />
+            ))}
+          </ul>
+        </>
       ) : null}
     </div>
   )

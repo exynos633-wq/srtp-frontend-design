@@ -5,6 +5,36 @@
   padding: 0 var(--page-padding) var(--space-10);
 }
 
+.header {
+  position: relative;
+  gap: 16px;
+  padding: 64px 180px 40px 0;
+}
+.header h1 { font-size: clamp(38px, 5vw, 64px); line-height: 1.15; letter-spacing: -.04em; }
+.header > p:first-child { font-size: 11px; letter-spacing: .16em; color: var(--color-accent); }
+.header > p:nth-of-type(2) { max-width: 48ch; font-size: 15px; line-height: 1.8; }
+.collectionCount {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  display: grid;
+  gap: 6px;
+  text-align: right;
+  color: var(--color-text-muted);
+}
+.collectionCount strong { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 72px; line-height: 1; font-weight: 400; letter-spacing: -.08em; }
+.collectionCount span { font-size: 12px; letter-spacing: .12em; }
+.directoryMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.directoryMeta span span { margin: 0 12px; color: var(--color-accent); }
+
 .state {
   display: grid;
   gap: var(--space-4);
@@ -21,12 +51,15 @@
   gap: var(--grid-gap);
   margin-top: var(--space-6);
 }
+.grid { margin-top: 8px; row-gap: 40px; }
 
 .skeletonGrid {
   margin-top: 0;
 }
 
 .skeletonCard {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-panel);
   background: var(--color-panel);
@@ -35,6 +68,7 @@
 
 .skeletonMedia {
   display: block;
+  flex: 1 0 auto;
   aspect-ratio: 16 / 10;
   background:
     linear-gradient(
@@ -51,7 +85,7 @@
 .skeletonBody {
   display: grid;
   gap: var(--space-2);
-  min-height: 76px;
+  min-height: 144px;
   align-content: center;
   padding: var(--space-4);
 }
@@ -95,6 +129,21 @@
   .skeletonGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .grid > li:first-child { grid-column: span 2; }
+  .skeletonGrid > div:first-child { grid-column: span 2; }
+  .skeletonGrid > div:first-child .skeletonMedia { aspect-ratio: 2.2; }
+  .skeletonGrid > div:first-child .skeletonBody,
+  .skeletonGrid > div:nth-child(2) .skeletonBody { min-height: 228px; }
+}
+
+@media (max-width: 767px) {
+  .header { padding: 36px 0 28px; gap: 12px; }
+  .header > p:nth-of-type(2) { font-size: 14px; }
+  .collectionCount { position: static; display: flex; gap: 10px; align-items: baseline; text-align: left; margin-top: 8px; }
+  .collectionCount strong { font-size: 28px; }
+  .directoryMeta { font-size: 11px; gap: 8px; }
+  .directoryMeta span span { margin: 0 4px; }
+  .grid { row-gap: 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

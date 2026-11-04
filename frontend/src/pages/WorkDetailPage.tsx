@@ -9,7 +9,7 @@ import { isApiError } from '../api/http'
 import { Button } from '../components/ui/Button'
 import { StatusMessage } from '../components/ui/StatusMessage'
 import { PreviewViewer } from '../components/works/PreviewViewer'
-import { resolveWorkModelSource } from '../viewer/workModelSource'
+import { resolvePreviewConfig } from '../viewer/workModelSource'
 import { classNames } from '../lib/classNames'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
 import type { PublicWork } from '../types/work'
@@ -166,7 +166,7 @@ function WorkDetailContent({ id }: { id?: string }) {
               onEntered={handleEntered}
               onPreviewStarted={handlePreviewStarted}
               ensureAvailable={ensurePreviewAvailable}
-              resolveModelSource={resolveWorkModelSource}
+              resolvePreviewConfig={resolvePreviewConfig}
             />
           </div>
 
@@ -189,12 +189,6 @@ function WorkDetailContent({ id }: { id?: string }) {
               <p className={styles.paragraph}>{displayedWork.description}</p>
             </section>
 
-            {displayedWork.modelingNote && displayedWork.modelingNote.trim() !== '' ? (
-              <section className={styles.section} data-detail-layer>
-                <h2 className={styles.sectionTitle}>建模说明（选填）</h2>
-                <p className={styles.paragraph}>{displayedWork.modelingNote}</p>
-              </section>
-            ) : null}
 
             <section className={classNames(styles.section, styles.commentSection)} data-detail-layer>
               <h2 className={styles.sectionTitle}>评论 · 预留</h2>

@@ -1,3 +1,4 @@
+import { viewerMenuItem } from './support/viewer-menu'
 import fs from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 
@@ -25,7 +26,7 @@ async function debugState(page: Page): Promise<ViewerDebug> {
 
 async function downloadPng(page: Page): Promise<Buffer> {
   const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: '保存 PNG 截图' }).click()
+  await (await viewerMenuItem(page, '保存 PNG 截图')).click()
   const download = await downloadPromise
   const path = await download.path()
   expect(path).toBeTruthy()
@@ -98,7 +99,7 @@ test.describe('真实客户端模型查看器', () => {
       expect(afterOff.camera.position).toEqual(before.camera.position)
       expect(afterOff.camera.target).toEqual(before.camera.target)
 
-      await page.getByRole('button', { name: '显示设置' }).click()
+      await (await viewerMenuItem(page, '显示设置')).click()
       await page.locator('#viewer-bloom').check()
       await page.locator('#viewer-bloom-strength').fill('1.5')
       await page.getByRole('button', { name: '关闭显示设置' }).click()
@@ -169,7 +170,7 @@ test.describe('真实客户端模型查看器', () => {
       return { prevented: event.defaultPrevented, keys }
     })
     expect(orbitCtrlW).toEqual({ prevented: false, keys: 0 })
-    await page.getByRole('button', { name: '复位视角' }).click()
+    await page.getByRole('button', { name: '复位视角', exact: true }).click()
     await page.waitForTimeout(150)
     const resetBaseline = await debugState(page)
     // Orbit 没有自由 look：右键拖动不能改 quaternion 后又被自动恢复跳回。
@@ -227,7 +228,7 @@ test.describe('真实客户端模型查看器', () => {
     await canvas.click({ position: { x: 180, y: 240 } })
     await page.keyboard.down('w')
     await page.waitForTimeout(300)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     expect(await page.evaluate(() => window.__srtpModelViewer!.keys?.size ?? -1)).toBe(0)
     await page.waitForTimeout(500)
     const afterCanvasBlur = await debugState(page)
@@ -270,7 +271,7 @@ test.describe('真实客户端模型查看器', () => {
     await page.keyboard.press('Escape')
 
     // 飞行相对速度真实影响位移，不只是更新显示值。
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await page.locator('#viewer-fly-speed').fill('0.2')
     await page.getByRole('button', { name: '关闭显示设置' }).click()
     await canvas.click({ position: { x: 170, y: 230 } })
@@ -281,7 +282,7 @@ test.describe('真实客户端模型查看器', () => {
     await page.keyboard.up('w')
     const slowFlyEnd = await debugState(page)
     const slowFlyDistance = distance(slowFlyStart.camera.position, slowFlyEnd.camera.position)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await page.locator('#viewer-fly-speed').fill('1.8')
     await page.getByRole('button', { name: '关闭显示设置' }).click()
     await canvas.click({ position: { x: 170, y: 230 } })
@@ -302,12 +303,12 @@ test.describe('真实客户端模型查看器', () => {
 
     // 浏览器 Fullscreen 是独立入口；同一 canvas 随根容器变大。
     const beforeFullscreen = await debugState(page)
-    await page.getByRole('button', { name: '全屏查看' }).click()
+    await page.getByRole('button', { name: '全屏查看', exact: true }).click()
     await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true)
     await page.waitForTimeout(1200)
     const fullscreenCanvasWidth = await page.evaluate(() => document.querySelector('canvas')!.width)
     expect(fullscreenCanvasWidth).toBeGreaterThan(beforeFullscreen.stats!.width)
-    await page.getByRole('button', { name: '退出全屏' }).click()
+    await page.getByRole('button', { name: '退出全屏', exact: true }).click()
     await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true)
     await page.waitForTimeout(300)
 
@@ -316,7 +317,7 @@ test.describe('真实客户端模型查看器', () => {
     await expect
       .poll(() => page.evaluate(() => document.fullscreenElement === document.documentElement))
       .toBe(true)
-    await page.getByRole('button', { name: '全屏查看' }).click()
+    await page.getByRole('button', { name: '全屏查看', exact: true }).click()
     await page.waitForTimeout(300)
     expect(await page.evaluate(() => document.fullscreenElement === document.documentElement)).toBe(true)
     await page.evaluate(() => document.exitFullscreen())
@@ -325,14 +326,14 @@ test.describe('真实客户端模型查看器', () => {
     // 模态打开前按住 W，打开放大层后按键状态必须被清理。
     await canvas.click({ position: { x: 180, y: 240 } })
     await page.keyboard.down('w')
-    await page.getByRole('button', { name: '放大查看' }).click()
+    await page.getByRole('button', { name: '放大查看', exact: true }).click()
     const keysAfterModal = await page.evaluate(() => window.__srtpModelViewer!.keys?.size ?? -1)
     await page.keyboard.up('w')
     expect(keysAfterModal).toBe(0)
     await page.keyboard.press('Escape')
 
     // 设置面板中的滑块获得焦点时，W 不应驱动相机。
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     const range = page.locator('#viewer-splat-scale')
     await range.focus()
     const beforeSliderKey = await debugState(page)
@@ -343,47 +344,16 @@ test.describe('真实客户端模型查看器', () => {
     expect(distance(beforeSliderKey.camera.position, afterSliderKey.camera.position)).toBeLessThan(0.01)
     await page.getByRole('button', { name: '关闭显示设置' }).click()
 
-    // Walk 必须先编辑并明确确认；不再使用 window.confirm 直接接受 bbox 建议。
-    await page.getByRole('button', { name: '步行模式' }).click()
-    await expect(page.getByRole('heading', { name: '进入步行模式' })).toBeVisible()
-    // 进入前保持当前 Fly；不会因为打开面板就切到 Walk。
-    expect((await debugState(page)).mode).toBe('fly')
-    await page.locator('#viewer-walk-ground').fill('1.5')
-    await page.locator('#viewer-walk-eye').fill('2.5')
-    await page.locator('#viewer-walk-start-x').fill('3')
-    await page.locator('#viewer-walk-start-y').fill('4')
-    await expect(page.getByText('没有可信有限步行区域：点击传送已禁用，只能地面行走。')).toBeVisible()
-    await page.getByText('我确认仅地面高度约束，不是真实碰撞，也不防穿墙').click()
-    await page.getByRole('button', { name: '确认进入步行' }).click()
-    await page.waitForTimeout(200)
-    const walk = await debugState(page)
-    expect(walk.mode).toBe('walk')
-    expect(walk.walk.ground).toBe(1.5)
-    expect(walk.walk.eyeHeight).toBe(2.5)
-    expect(walk.walk.start).toEqual([3, 4])
-    expect(walk.camera.position[2]).toBeCloseTo(4, 1)
-    expect(walk.walk.areaTrusted).toBe(false)
-    await page.getByRole('button', { name: '关闭显示设置' }).click()
-    const beforeWalkClick = await debugState(page)
-    await canvas.click({ position: { x: 160, y: 260 } })
-    await page.waitForTimeout(200)
-    expect(distance(beforeWalkClick.camera.position, (await debugState(page)).camera.position)).toBeLessThan(0.01)
+    await expect(page.getByRole('button', { name: '步行模式' })).toHaveCount(0)
 
-    // 方向改变：回 Orbit，作废旧 Walk 地面/区域确认；光照滑块值保留。
-    await page.getByRole('button', { name: '显示设置' }).click()
+    // 方向改变：回 Orbit，光照滑块值保留。
+    await (await viewerMenuItem(page, '显示设置')).click()
     await page.locator('#viewer-light-intensity').fill('1.4')
     await page.locator('#viewer-source-up').selectOption('z')
     await page.waitForTimeout(500)
     const turned = await debugState(page)
     expect(turned.mode).toBe('orbit')
     expect(turned.display.lightIntensity).toBe(1.4)
-    expect(turned.walk.areaTrusted).toBe(false)
-    expect(turned.walk.start).not.toEqual([3, 4])
-    await expect(page.getByRole('heading', { name: '进入步行模式' })).toHaveCount(0)
-    await page.getByRole('button', { name: '步行模式' }).click()
-    await expect(page.getByRole('heading', { name: '进入步行模式' })).toBeVisible()
-    expect((await debugState(page)).mode).toBe('orbit')
-    await page.getByRole('button', { name: '取消' }).click()
     await page.getByRole('button', { name: '关闭显示设置' }).click()
 
     // 触控上下文：显式启用前不改变 touch-action；启用后单指旋转真实改变相机。
@@ -397,8 +367,8 @@ test.describe('真实客户端模型查看器', () => {
     const touchCanvas = touchPage.locator('canvas')
     await expect(touchCanvas).toHaveCSS('touch-action', 'pan-y')
     await expect(touchPage.getByRole('button', { name: '飞行模式' })).toBeDisabled()
-    await expect(touchPage.getByRole('button', { name: '步行模式' })).toBeDisabled()
-    await touchPage.getByRole('button', { name: '显示设置' }).click()
+    await expect(touchPage.getByRole('button', { name: '步行模式' })).toHaveCount(0)
+    await (await viewerMenuItem(touchPage, '显示设置')).click()
     await touchPage.locator('#viewer-touch').check()
     await touchPage.getByRole('button', { name: '关闭显示设置' }).click()
     await expect(touchCanvas).toHaveCSS('touch-action', 'none')
@@ -507,14 +477,14 @@ test.describe('真实客户端模型查看器', () => {
     )
     const cameraBefore = (await debugState(page)).camera
     const original = await downloadPng(page)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await expect(page.locator('#viewer-splat-scale')).toBeDisabled()
     await expect(page.locator('#viewer-soft-light')).toBeEnabled()
     await expect(page.locator('#viewer-light-intensity')).toBeEnabled()
     await expect(page.locator('#viewer-emission')).toBeDisabled()
     await expect(page.locator('#viewer-emission-intensity')).toBeDisabled()
     await expect(page.locator('#viewer-fly-speed')).toBeEnabled()
-    await expect(page.locator('#viewer-walk-speed')).toBeEnabled()
+    await expect(page.locator('#viewer-walk-speed')).toHaveCount(0)
     await page.locator('#viewer-light-intensity').fill('1.4')
     await page.locator('#viewer-fly-speed').fill('1.2')
     expect((await debugState(page)).display.lightIntensity).toBe(1.4)
@@ -555,7 +525,7 @@ test.describe('真实客户端模型查看器', () => {
       { a: original.toString('base64'), b: toned.toString('base64') },
     )
     expect(toneDiff).toBeGreaterThan(100)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     const cameraAfter = (await debugState(page)).camera
     expect(cameraAfter.position).toEqual(cameraBefore.position)
     expect(cameraAfter.target).toEqual(cameraBefore.target)
@@ -605,9 +575,9 @@ test.describe('真实客户端模型查看器', () => {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )
       expect(overflow).toBeLessThanOrEqual(1)
-      await expect(page.getByRole('button', { name: '保存 PNG 截图' })).toBeVisible()
-      await expect(page.getByRole('button', { name: '全屏查看' })).toBeVisible()
-      await page.getByRole('button', { name: '显示设置' }).click()
+      await expect((await viewerMenuItem(page, '保存 PNG 截图'))).toBeVisible()
+      await expect(page.getByRole('button', { name: '全屏查看', exact: true })).toBeVisible()
+      await (await viewerMenuItem(page, '显示设置')).click()
       const boxes = await page.evaluate(() => {
         const canvas = document.querySelector('canvas')!.getBoundingClientRect()
         const panel = document.querySelector('aside[aria-label="显示设置"]')!.getBoundingClientRect()
@@ -615,32 +585,18 @@ test.describe('真实客户端模型查看器', () => {
       })
       expect(boxes.panel.width).toBeGreaterThan(200)
       expect(boxes.panel.right).toBeLessThanOrEqual(boxes.viewport + 1)
-      // 普通详情容器约 775px：设置必须在画布下方，不能盖住主模型。
-      expect(boxes.panel.top).toBeGreaterThanOrEqual(boxes.canvas.top + boxes.canvas.height - 1)
-      if (width <= 390) {
-        await page.getByRole('button', { name: '步行模式' }).click()
-        await expect(page.getByRole('heading', { name: '进入步行模式' })).toBeVisible()
-        const walkOverflow = await page.evaluate(() => {
-          const panel = document.querySelector('aside[aria-label="显示设置"]') as HTMLElement
-          const setup = document.querySelector('section[aria-label="步行设置"]') as HTMLElement
-          return {
-            panel: panel.scrollWidth - panel.clientWidth,
-            setup: setup.scrollWidth - setup.clientWidth,
-          }
-        })
-        expect(walkOverflow.panel).toBeLessThanOrEqual(1)
-        expect(walkOverflow.setup).toBeLessThanOrEqual(1)
-        await page.getByRole('button', { name: '取消' }).click()
-      }
+      // 设置面板在观看区内按需展开，不能越过画面或页面边界。
+      expect(boxes.panel.top).toBeGreaterThanOrEqual(boxes.canvas.top)
+      await expect(page.getByRole('button', { name: '步行模式' })).toHaveCount(0)
       await page.getByRole('button', { name: '关闭显示设置' }).click()
     }
 
     // 真正宽的放大容器才把设置放到画布右侧。
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.getByRole('button', { name: '放大查看' }).click()
+    await page.getByRole('button', { name: '放大查看', exact: true }).click()
     await expect(page.locator('section[role="dialog"]')).toBeVisible()
     await page.waitForTimeout(800)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await page.waitForTimeout(200)
     const wideBoxes = await page.evaluate(() => {
       const canvas = document.querySelector('section[role="dialog"] canvas')!.getBoundingClientRect()
@@ -651,97 +607,6 @@ test.describe('真实客户端模型查看器', () => {
     expect(wideBoxes.panel.width).toBeGreaterThan(280)
     await page.getByRole('button', { name: '关闭显示设置' }).click()
     await page.keyboard.press('Escape')
-  })
-
-  test('显式 Walk 配置在方向纠正后统一作废，重新确认的起点不被旧区域夹取', async ({ page }) => {
-    test.setTimeout(60_000)
-    await page.goto('/works')
-    const result = await page.evaluate(async () => {
-      // @ts-expect-error DEV-only module URL, resolved by Vite at runtime.
-      const { ModelViewer } = await import('/src/viewer/ModelViewer.ts')
-      const source = {
-        kind: 'url' as const,
-        url: '/__dev/models/asset_demo_001_model/ancient_chinese_courtyard_park.glb?v=walk-constraint',
-        version: 'walk-constraint',
-        name: 'walk-constraint',
-      }
-      const config = {
-        ground: { height: 100 },
-        eyeHeight: 2,
-        walkStart: [0, 0] as [number, number],
-        walkArea: { minX: -1, maxX: 1, minY: -1, maxY: 1 },
-        walkAreaTrusted: true,
-      }
-      const create = () => {
-        const host = document.createElement('div')
-        host.style.cssText = 'position:fixed;left:0;top:0;width:800px;height:600px;z-index:9999'
-        const canvas = document.createElement('canvas')
-        canvas.style.cssText = 'width:800px;height:600px;display:block'
-        host.appendChild(canvas)
-        document.body.appendChild(host)
-        const viewer = new ModelViewer(canvas, host, { autoRotate: false })
-        return { viewer, host }
-      }
-
-      const first = create()
-      await first.viewer.load(source, config)
-      const before = first.viewer.getWalkDefaults()
-      first.viewer.rotateOrientation('x')
-      const afterDirection = first.viewer.getWalkDefaults()
-      const debugAfterDirection = first.viewer.getDebugState().walk as {
-        ground: number
-        start: [number, number]
-        areaTrusted: boolean
-      }
-      first.viewer.configureWalk({ ground: 5, eyeHeight: 3, start: [10, 20] })
-      first.viewer.setMode('walk')
-      const reconfigured = first.viewer.getDebugState()
-      first.viewer.dispose()
-      first.host.remove()
-
-      const second = create()
-      await second.viewer.load(source, config)
-      second.viewer.configureWalk({ ground: 5, eyeHeight: 3, start: [10, 20] })
-      second.viewer.setMode('walk')
-      const constrained = second.viewer.getDebugState()
-      second.viewer.dispose()
-      second.host.remove()
-
-      return {
-        before,
-        afterDirection,
-        debugAfterDirection: {
-          ground: debugAfterDirection.ground,
-          start: debugAfterDirection.start,
-          areaTrusted: debugAfterDirection.areaTrusted,
-        },
-        reconfigured: {
-          areaTrusted: reconfigured.walk.areaTrusted as boolean,
-          camera: reconfigured.camera.position as number[],
-        },
-        constrained: {
-          areaTrusted: constrained.walk.areaTrusted as boolean,
-          camera: constrained.camera.position as number[],
-        },
-      }
-    })
-    expect(result.before.ground).toBe(100)
-    expect(result.before.areaTrusted).toBe(true)
-    expect(result.afterDirection.areaTrusted).toBe(false)
-    expect(result.afterDirection.area).toBeNull()
-    expect(result.afterDirection.ground).not.toBe(100)
-    expect(result.afterDirection.start).not.toEqual([0, 0])
-    expect(result.debugAfterDirection.areaTrusted).toBe(false)
-    expect(result.debugAfterDirection.ground).toBe(result.afterDirection.ground)
-    expect(result.debugAfterDirection.start).toEqual(result.afterDirection.start)
-    expect(result.reconfigured.areaTrusted).toBe(false)
-    expect(result.reconfigured.camera[0]).toBeCloseTo(10, 4)
-    expect(result.reconfigured.camera[1]).toBeCloseTo(20, 4)
-    expect(result.reconfigured.camera[2]).toBeCloseTo(8, 4)
-    expect(result.constrained.areaTrusted).toBe(true)
-    expect(result.constrained.camera[0]).toBeCloseTo(1, 4)
-    expect(result.constrained.camera[1]).toBeCloseTo(1, 4)
-    expect(result.constrained.camera[2]).toBeCloseTo(8, 4)
   })
 
   test('WebGL2 不可用时明确报错，不请求模型、不假装成功', async ({ page }) => {
@@ -870,7 +735,7 @@ test.describe('真实客户端模型查看器', () => {
       () => performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/__dev/models/')).length,
     )
     const original = await downloadPng(page)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await expect(page.locator('#viewer-splat-scale')).toBeEnabled()
     await expect(page.locator('#viewer-soft-light')).toBeDisabled()
     await expect(page.locator('#viewer-light-intensity')).toBeDisabled()
@@ -882,7 +747,7 @@ test.describe('真实客户端模型查看器', () => {
     await page.getByRole('button', { name: '关闭显示设置' }).click()
     await page.waitForTimeout(500)
     const toned = await downloadPng(page)
-    await page.getByRole('button', { name: '显示设置' }).click()
+    await (await viewerMenuItem(page, '显示设置')).click()
     await page.locator('#viewer-splat-scale').fill('2.5')
     const requestsAfter = await page.evaluate(
       () => performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/__dev/models/')).length,
@@ -949,14 +814,9 @@ test.describe('真实客户端模型查看器', () => {
     expect(state.info?.sourceUp).toBe('y')
     expect(state.stats?.dpr).toBeLessThanOrEqual(1.5)
 
-    // 替换前处于 Walk 且按住 W；load 必须清键并回到 Orbit，不能继承旧模式/移动。
-    await page.getByRole('button', { name: '显示设置' }).click()
-    await page.getByRole('button', { name: '步行模式' }).click()
-    await page.locator('#viewer-walk-ground').fill('0')
-    await page.locator('#viewer-walk-eye').fill('2')
-    await page.getByText('我确认仅地面高度约束，不是真实碰撞，也不防穿墙').click()
-    await page.getByRole('button', { name: '确认进入步行' }).click()
-    await expect.poll(() => page.evaluate(() => window.__srtpModelViewer!.getDebugState().mode)).toBe('walk')
+    // 替换前处于 Fly 且按住 W；load 必须清键并回到 Orbit。
+    await page.getByRole('button', { name: '飞行模式' }).click()
+    await expect.poll(() => page.evaluate(() => window.__srtpModelViewer!.getDebugState().mode)).toBe('fly')
     await page.locator('canvas').click({ position: { x: 100, y: 220 } })
     await page.keyboard.down('w')
     await page.waitForTimeout(200)
@@ -987,7 +847,7 @@ test.describe('真实客户端模型查看器', () => {
     )
     expect((await debugState(page)).stats?.dpr).toBe(1)
 
-    await page.getByRole('button', { name: '录制 35 秒' }).click()
+    await (await viewerMenuItem(page, '录制 35 秒')).click()
     await page.waitForTimeout(1500)
     const downloadPromise = page.waitForEvent('download', { timeout: 1500 }).catch(() => null)
     await page.locator('input[aria-label="选择本地模型文件"]').setInputFiles(

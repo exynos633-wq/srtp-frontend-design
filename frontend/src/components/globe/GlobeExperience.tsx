@@ -849,13 +849,41 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
         打开城市作品，按 Escape 关闭。
       </p>
 
+      <div className={styles.cartography} aria-hidden="true">
+        <svg className={styles.orbits} viewBox="0 0 1000 1000" fill="none">
+          <circle cx="500" cy="500" r="460" className={styles.orbitTrack} />
+          <circle cx="500" cy="500" r="480" className={styles.orbitSegments} />
+          <ellipse cx="500" cy="500" rx="496" ry="300" transform="rotate(-28 500 500)" className={styles.orbitTrack} />
+          <g className={styles.orbitTicks}>
+            {Array.from({ length: 72 }, (_, index) => (
+              <path key={index} d={`M500 40v${index % 6 === 0 ? 14 : 5}`} transform={`rotate(${index * 5} 500 500)`} />
+            ))}
+          </g>
+          <g className={styles.orbitMarkers}>
+            <path d="M492 20h16M500 12v16M492 980h16M500 972v16" />
+            <circle cx="40" cy="500" r="3" />
+            <circle cx="960" cy="500" r="3" />
+          </g>
+        </svg>
+        <svg className={styles.terrain} viewBox="0 0 520 200" fill="none">
+          <g>
+            {[0, 1, 2, 3, 4, 5, 6].map((index) => (
+              <path key={index} transform={`translate(${index * -8} ${index * 12})`} d="M-40 70C24 114 64 0 144 28S236 126 314 74 424 18 560 62M-40 82C28 132 64 20 144 45S242 146 320 92 432 38 560 80" />
+            ))}
+          </g>
+        </svg>
+        <div className={styles.mapCaption}>
+          <span>地理视野</span>
+          <span>EARTH / SPATIAL ARCHIVE</span>
+        </div>
+      </div>
+
       <div className={styles.canvas}>
         <Canvas
-          flat
           dpr={[1, 1.75]}
           gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
           camera={{ fov: GLOBE_FOV, near: 0.1, far: 100, position: [0, 0, 4] }}
-          onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
+          onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.toneMappingExposure = 1.2 }}
         >
           <SceneSync
             cities={cities}
@@ -867,7 +895,7 @@ export default function GlobeExperience({ cities, reducedMotion }: GlobeExperien
             bubbleSizeRef={bubbleSizeRef}
             connectorRef={connectorRef}
           />
-          <Earth />
+          <Earth reducedMotion={reducedMotion} />
         </Canvas>
       </div>
 
@@ -1061,10 +1089,12 @@ function SceneSync({
       return
     }
 
+    // Reserve the editorial headline column when positioning the city card.
+    const safeLeft = size.width >= 768 ? size.width * 0.38 : 0
     const placement = placeCityBubble({
-      x: point.x,
+      x: point.x - safeLeft,
       y: point.y,
-      stageWidth: size.width,
+      stageWidth: size.width - safeLeft,
       stageHeight: size.height,
       bubbleWidth: bubble.width,
       bubbleHeight: bubble.height,
@@ -1076,12 +1106,12 @@ function SceneSync({
       return
     }
 
-    layer.style.transform = `translate3d(${placement.left}px, ${placement.top}px, 0)`
+    layer.style.transform = `translate3d(${placement.left + safeLeft}px, ${placement.top}px, 0)`
     layer.style.visibility = 'visible'
     line.style.visibility = 'visible'
     line.setAttribute('x1', String(point.x))
     line.setAttribute('y1', String(point.y))
-    line.setAttribute('x2', String(placement.lineX))
+    line.setAttribute('x2', String(placement.lineX + safeLeft))
     line.setAttribute('y2', String(placement.lineY))
   })
 

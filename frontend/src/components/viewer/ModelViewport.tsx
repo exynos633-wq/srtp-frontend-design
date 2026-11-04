@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ModelFormat } from '../../types/work'
 import { classNames } from '../../lib/classNames'
 import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
 import { toViewerErrorInfo } from '../../viewer/errors'
 import { ModelViewer } from '../../viewer/ModelViewer'
+import { RemoteModelViewer } from '../../viewer/RemoteModelViewer'
+import type { ViewerController } from '../../viewer/controller'
+import type { RemotePreview } from '../../api/preview'
 import type {
   ModelInfo,
   ModelSource,
@@ -32,7 +35,6 @@ import {
   ResetIcon,
   SettingsIcon,
   StopIcon,
-  WalkIcon,
   ZoomIcon,
 } from './icons'
 import styles from './ModelViewport.module.css'
@@ -58,7 +60,11 @@ const PHASE_LABEL: Record<ViewerPhase, string> = {
 
 export interface ModelViewportProps {
   source: ModelSource | null
+  remote?: RemotePreview | null
+  onRemoteFailure?: (error: unknown) => void
   modelName: string
+  modelingNote?: string | null
+  zoomed?: boolean
   modelFormat?: ModelFormat | null
   viewConfig?: ModelViewConfig
   dprCap?: number
@@ -103,7 +109,11 @@ function formatMetric(value: number | null | undefined, digits = 1): string {
  */
 export function ModelViewport({
   source,
+  remote,
+  onRemoteFailure,
   modelName,
+  modelingNote,
+  zoomed = false,
   modelFormat,
   viewConfig,
   dprCap,
@@ -121,11 +131,26 @@ export function ModelViewport({
 }: ModelViewportProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const viewerRef = useRef<ModelViewer | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const viewerRef = useRef<ViewerController | null>(null)
+  const remoteFailureRef = useRef(onRemoteFailure)
   const callbacksRef = useRef({ onPhase, onReady, onError, onEnd })
   const messageTimerRef = useRef<number | null>(null)
 
+  const menuId = useId()
+  const moreRef = useRef<HTMLDivElement>(null)
+  const moreButtonRef = useRef<HTMLButtonElement>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  function runMenuAction(action: () => void) {
+    setMoreOpen(false)
+    moreButtonRef.current?.focus()
+    action()
+  }
+
+
   const [phase, setPhase] = useState<ViewerPhase>('idle')
+  const [phaseDetail, setPhaseDetail] = useState('')
   const [info, setInfo] = useState<ModelInfo | null>(null)
   const [error, setError] = useState<ViewerErrorInfo | null>(null)
   const [progress, setProgress] = useState<{ loaded: number; total: number | null; percent: number | null } | null>(null)
@@ -147,18 +172,25 @@ export function ModelViewport({
   const [emission, setEmission] = useState(false)
   const [emissionIntensity, setEmissionIntensity] = useState(1.6)
   const [flySpeed, setFlySpeed] = useState(0.6)
-  const [walkSpeed, setWalkSpeed] = useState(0.3)
   const [sourceUpChoice, setSourceUpChoice] = useState<'auto' | 'z' | 'y'>(viewConfig?.sourceUp ?? 'auto')
   const sourceUpChoiceRef = useRef(sourceUpChoice)
   const [touchEnabled, setTouchEnabled] = useState(false)
   const [recordingBusy, setRecordingBusy] = useState(false)
-  const [walkSetupOpen, setWalkSetupOpen] = useState(false)
-  const [walkGround, setWalkGround] = useState(0)
-  const [walkEye, setWalkEye] = useState(1)
-  const [walkStartX, setWalkStartX] = useState(0)
-  const [walkStartY, setWalkStartY] = useState(0)
-  const [walkConfirmed, setWalkConfirmed] = useState(false)
-  const [walkAreaTrusted, setWalkAreaTrusted] = useState(false)
+
+  useEffect(() => {
+    if (!moreOpen && !settingsOpen && !infoOpen) return
+    viewerRef.current?.beginParameterInteraction()
+    if (moreOpen) moreRef.current?.querySelector<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)')?.focus()
+    else rootRef.current?.querySelector<HTMLButtonElement>(settingsOpen ? 'button[aria-label="关闭显示设置"]' : 'button[aria-label="关闭模型信息"]')?.focus()
+    const outside = (event: PointerEvent) => {
+      if (moreOpen && !moreRef.current?.contains(event.target as Node)) setMoreOpen(false)
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => {
+      document.removeEventListener('pointerdown', outside)
+      viewerRef.current?.endParameterInteraction()
+    }
+  }, [moreOpen, settingsOpen, infoOpen])
 
   const reducedMotion = useMemo(() => prefersReducedMotion(), [])
   const detectedLowPower = useMemo(() => isLowPowerDevice(), [])
@@ -177,8 +209,9 @@ export function ModelViewport({
     (!info && (modelFormat === 'glb' || modelFormat === 'mesh-ply'))
 
   useEffect(() => {
+    remoteFailureRef.current = onRemoteFailure
     callbacksRef.current = { onPhase, onReady, onError, onEnd }
-  }, [onEnd, onError, onPhase, onReady])
+  }, [onEnd, onError, onPhase, onReady, onRemoteFailure])
 
   const notify = useCallback((text: string) => {
     setMessage(text)
@@ -192,8 +225,12 @@ export function ModelViewport({
   const handleEvent = useCallback(
     (event: ModelViewerEvent) => {
       switch (event.type) {
+        case 'notice':
+          notify(event.message)
+          break
         case 'phase':
           setPhase(event.phase)
+          setPhaseDetail(event.detail ?? '')
           callbacksRef.current.onPhase?.(event.phase)
           if (event.phase === 'read' || event.phase === 'parse' || event.phase === 'initialize') {
             setError(null)
@@ -216,7 +253,7 @@ export function ModelViewport({
           setError(null)
           setProgress(null)
           callbacksRef.current.onReady?.(event.info)
-          notify('模型已加载，可用鼠标或触控操作。')
+          notify('模型已就绪，可用鼠标或触控操作。')
           break
         case 'error':
           setError(event.error)
@@ -229,7 +266,6 @@ export function ModelViewport({
           break
         case 'mode':
           setMode(event.mode)
-          if (event.mode !== 'walk') setWalkSetupOpen(false)
           break
         case 'autoRotate':
           setAutoRotate(event.enabled)
@@ -263,18 +299,26 @@ export function ModelViewport({
 
   useEffect(() => {
     const canvas = canvasRef.current
+    const video = videoRef.current
     const root = rootRef.current
-    if (!canvas || !root) return
-    let viewer: ModelViewer
+    if (!root || (!remote && !canvas) || (remote && !video)) return
+    let viewer: ViewerController
     try {
-      viewer = new ModelViewer(canvas, root, {
+      const options = {
         autoRotate: initialAutoRotate,
         reducedMotion,
         dprCap,
         lowPower: effectiveLowPower,
-        onEvent: (event) => handleEventRef.current(event),
-      })
+        onEvent: (event: ModelViewerEvent) => handleEventRef.current(event),
+      }
+      viewer = remote
+        ? new RemoteModelViewer(video!, root, remote, options, (failure) => remoteFailureRef.current?.(failure))
+        : new ModelViewer(canvas!, root, options)
     } catch (failure) {
+      if (remote) {
+        window.queueMicrotask(() => remoteFailureRef.current?.(failure))
+        return
+      }
       const info = toViewerErrorInfo(failure)
       window.queueMicrotask(() => {
         setError(info)
@@ -284,7 +328,7 @@ export function ModelViewport({
       return
     }
     viewerRef.current = viewer
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && viewer instanceof ModelViewer) {
       ;(window as unknown as { __srtpModelViewer?: ModelViewer }).__srtpModelViewer = viewer
     }
     const onFullscreenChange = () => setFullscreen(document.fullscreenElement === root)
@@ -312,7 +356,6 @@ export function ModelViewport({
     setStats(null)
     setRecordingResult(null)
     setProgress(null)
-    setWalkSetupOpen(false)
     const nextSourceUp = config.sourceUp ?? 'auto'
     sourceUpChoiceRef.current = nextSourceUp
     setSourceUpChoice(nextSourceUp)
@@ -383,11 +426,6 @@ export function ModelViewport({
     viewerRef.current?.setFlySpeed(value)
   }
 
-  function changeWalkSpeed(value: number) {
-    setWalkSpeed(value)
-    viewerRef.current?.setWalkSpeed(value)
-  }
-
   function changeSourceUp(value: 'auto' | 'z' | 'y') {
     setSourceUpChoice(value)
   }
@@ -398,52 +436,6 @@ export function ModelViewport({
 
   function resetOrientation() {
     viewerRef.current?.resetOrientation()
-  }
-
-  function openWalkSetup() {
-    const viewer = viewerRef.current
-    if (!viewer) return
-    viewer.beginParameterInteraction()
-    const defaults = viewer.getWalkDefaults()
-    setWalkGround(Number(defaults.ground.toFixed(4)))
-    setWalkEye(Number(defaults.eyeHeight.toFixed(4)))
-    setWalkStartX(Number(defaults.start[0].toFixed(4)))
-    setWalkStartY(Number(defaults.start[1].toFixed(4)))
-    setWalkAreaTrusted(defaults.areaTrusted)
-    setWalkConfirmed(false)
-    setWalkSetupOpen(true)
-    setSettingsOpen(true)
-    setInfoOpen(false)
-  }
-
-  function confirmWalk() {
-    const viewer = viewerRef.current
-    if (!viewer) return
-    const ground = Number(walkGround)
-    const eyeHeight = Number(walkEye)
-    const startX = Number(walkStartX)
-    const startY = Number(walkStartY)
-    if (
-      ![ground, eyeHeight, startX, startY].every((value) => Number.isFinite(value)) ||
-      eyeHeight <= 0
-    ) {
-      notify('步行参数必须是有限数值，视角高必须大于 0。')
-      return
-    }
-    try {
-      viewer.configureWalk({ ground, eyeHeight, start: [startX, startY] })
-      viewer.setMode('walk')
-      viewer.endParameterInteraction()
-      setMode('walk')
-      setWalkSetupOpen(false)
-      notify(
-        walkAreaTrusted
-          ? '已进入步行模式：仅地面约束；可信区域内点击地面会二次确认传送。'
-          : '已进入步行模式：仅地面约束；没有可信步行区域，点击传送已禁用。',
-      )
-    } catch (failure) {
-      notify(toViewerErrorInfo(failure).message)
-    }
   }
 
   function toggleAutoRotate() {
@@ -477,16 +469,7 @@ export function ModelViewport({
   }
 
   function changeMode(next: ViewerMode) {
-    if (walkSetupOpen && next !== 'walk') {
-      viewerRef.current?.endParameterInteraction()
-      setWalkSetupOpen(false)
-    }
-    if (next === mode) return
-    if (next !== 'orbit' && coarsePointer) return
-    if (next === 'walk') {
-      openWalkSetup()
-      return
-    }
+    if (next === mode || (next !== 'orbit' && coarsePointer)) return
     viewerRef.current?.setMode(next)
     setMode(next)
   }
@@ -557,7 +540,7 @@ export function ModelViewport({
   const emissiveAvailable = canControlEmission(hasEmissive, uniformTone)
   const progressPercent = progress?.percent ?? null
   const sourceLabel =
-    source?.kind === 'file' ? source.file.name : source?.kind === 'url' ? source.name ?? source.url : '未配置'
+    remote ? info?.sourceName ?? modelName : source?.kind === 'file' ? source.file.name : source?.kind === 'url' ? source.name ?? source.url : '未配置'
   const recordingLabel = recording.recording
     ? `录制中 ${formatSeconds(recording.elapsedMs)} · 剩余 ${formatSeconds(recording.remainingMs)}`
     : recordingResult
@@ -567,6 +550,13 @@ export function ModelViewport({
   return (
     <div
       ref={rootRef}
+      onKeyDownCapture={(event) => {
+        if (event.key === 'Escape' && (moreOpen || settingsOpen || infoOpen)) {
+          event.preventDefault(); event.stopPropagation()
+          setMoreOpen(false); setSettingsOpen(false); setInfoOpen(false)
+          moreButtonRef.current?.focus()
+        }
+      }}
       className={classNames(styles.root, className)}
       data-viewer-phase={phase}
       data-viewer-ready={ready ? 'true' : 'false'}
@@ -574,167 +564,28 @@ export function ModelViewport({
       data-viewer-settings-open={settingsOpen ? 'true' : 'false'}
     >
       <div className={styles.stage}>
-        <canvas
+        {remote ? <video
+          ref={videoRef}
+          className={styles.canvas}
+          style={{ objectFit: 'fill' }}
+          muted playsInline autoPlay
+          tabIndex={0}
+          aria-label={`${modelName} 远程模型画面。鼠标旋转、滚轮缩放，WASD 漫游，F 复位。`}
+          data-viewer-video
+        /> : <canvas
           ref={canvasRef}
           className={styles.canvas}
           tabIndex={0}
-          aria-label={`${modelName} 三维模型画布。方向键不移动；WASD 在飞行或步行模式移动，F 复位视角，鼠标左键旋转、中键平移、滚轮缩放。`}
+          aria-label={`${modelName} 三维模型画布。方向键不移动；WASD 在飞行模式移动，F 复位视角，鼠标左键旋转、中键平移、滚轮缩放。`}
           data-viewer-canvas
-        />
+        />}
 
-        <div className={styles.topBar}>
-          <div className={styles.toolbar} role="toolbar" aria-label="模型查看工具栏">
-            <div className={styles.segment} role="group" aria-label="相机模式">
-              <button
-                type="button"
-                className={classNames(styles.iconButton, mode === 'orbit' && styles.iconButtonActive)}
-                aria-label="环绕模式"
-                aria-pressed={mode === 'orbit'}
-                title="环绕：左键旋转，中键平移，滚轮缩放"
-                onClick={() => changeMode('orbit')}
-              >
-                <OrbitIcon />
-              </button>
-              <button
-                type="button"
-                className={classNames(styles.iconButton, mode === 'fly' && styles.iconButtonActive)}
-                aria-label="飞行模式"
-                aria-pressed={mode === 'fly'}
-                title={coarsePointer ? '飞行模式为桌面核心功能，触屏未启用' : '飞行：WASD 移动，Shift 加速，Ctrl 减速，右键观察'}
-                disabled={coarsePointer || !ready}
-                onClick={() => changeMode('fly')}
-              >
-                <FlyIcon />
-              </button>
-              <button
-                type="button"
-                className={classNames(styles.iconButton, mode === 'walk' && styles.iconButtonActive)}
-                aria-label="步行模式"
-                aria-pressed={mode === 'walk' || walkSetupOpen}
-                title={
-                  coarsePointer
-                    ? '步行模式为桌面核心功能，触屏未启用'
-                    : '步行：先编辑地面/视角高/起点并确认；仅地面约束，不防穿墙'
-                }
-                disabled={coarsePointer || !ready}
-                onClick={() => changeMode('walk')}
-              >
-                <WalkIcon />
-              </button>
-            </div>
-
-            <div className={styles.toolActions}>
-              <button
-                type="button"
-                className={styles.iconButton}
-                aria-label="复位视角"
-                title="复位到初始视角（F）"
-                disabled={!ready}
-                onClick={resetView}
-              >
-                <ResetIcon />
-              </button>
-              <button
-                type="button"
-                className={classNames(styles.iconButton, infoOpen && styles.iconButtonActive)}
-                aria-label="模型信息"
-                aria-pressed={infoOpen}
-                title="模型信息"
-                onClick={() => {
-                  setInfoOpen((value) => !value)
-                  setSettingsOpen(false)
-                }}
-              >
-                <InfoIcon />
-              </button>
-              <button
-                type="button"
-                className={classNames(styles.iconButton, settingsOpen && styles.iconButtonActive)}
-                aria-label="显示设置"
-                aria-pressed={settingsOpen}
-                title="显示设置"
-                onClick={() => {
-                  setSettingsOpen((value) => !value)
-                  setInfoOpen(false)
-                }}
-              >
-                <SettingsIcon />
-              </button>
-              {onZoom ? (
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  data-action="zoom"
-                  aria-label="放大查看"
-                  title="页内放大查看"
-                  disabled={!ready}
-                  onClick={() => {
-                    viewerRef.current?.clearUserInput()
-                    onZoom()
-                  }}
-                >
-                  <ZoomIcon />
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={styles.iconButton}
-                aria-label={fullscreen ? '退出全屏' : '全屏查看'}
-                title={fullscreen ? '退出全屏' : '全屏查看'}
-                onClick={() => void toggleFullscreen()}
-              >
-                {fullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
-              </button>
-              <button
-                type="button"
-                className={styles.iconButton}
-                aria-label="保存 PNG 截图"
-                title="保存当前画面 PNG（含 Bloom）"
-                disabled={!ready}
-                onClick={() => void capture()}
-              >
-                <ImageIcon />
-              </button>
-              <button
-                type="button"
-                className={classNames(styles.iconButton, recording.recording && styles.iconButtonDanger)}
-                aria-label={recordingBusy ? '正在停止录制' : recording.recording ? '停止录制' : '录制 35 秒'}
-                title={recordingBusy ? '正在释放录制资源' : recording.recording ? '停止录制' : '录制 35 秒视频（无音频）'}
-                disabled={!ready || recordingBusy}
-                onClick={() => void toggleRecording()}
-              >
-                {recording.recording || recordingBusy ? <StopIcon /> : <RecordIcon />}
-              </button>
-              {showEnd ? (
-                <Button
-                  className={styles.endButton}
-                  onClick={() => void endPreview()}
-                  disabled={!onEnd}
-                >
-                  {endLabel}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          <p className={styles.recordingLine} role="status">
-            {recording.recording ? recordingLabel : recordingResult ? recordingLabel : ''}
-            {recordingResult && !recording.recording ? (
-              <button
-                type="button"
-                className={styles.downloadLink}
-                onClick={() => downloadRecording(recordingResult)}
-              >
-                下载视频
-              </button>
-            ) : null}
-          </p>
-        </div>
 
         {phaseBusy ? (
           <div className={styles.statusOverlay} role="status" aria-live="polite">
             <div className={styles.statusCard}>
               <span className={styles.spinner} aria-hidden="true" />
-              <p className={styles.statusTitle}>{PHASE_LABEL[phase]}</p>
+              <p className={styles.statusTitle}>{remote ? phaseDetail || '正在连接 GPU 并准备画面' : PHASE_LABEL[phase]}</p>
               {progress ? (
                 <>
                   <p className={styles.statusText}>
@@ -794,10 +645,12 @@ export function ModelViewport({
           <aside className={styles.infoPanel} aria-label="模型信息">
             <div className={styles.panelHead}>
               <h3 className={styles.panelTitle}>模型信息</h3>
-              <button type="button" className={styles.closeButton} aria-label="关闭模型信息" onClick={() => setInfoOpen(false)}>
+              <button type="button" className={styles.closeButton} aria-label="关闭模型信息" onClick={() => { setInfoOpen(false); moreButtonRef.current?.focus() }}>
                 <CloseIcon />
               </button>
             </div>
+            {modelingNote?.trim() ? <section><h4 className={styles.infoSubTitle}>建模说明</h4><p className={styles.modelingNote}>{modelingNote}</p></section> : null}
+            <h4 className={styles.infoSubTitle}>模型资料</h4>
             <dl className={styles.infoList}>
               <div>
                 <dt>来源</dt>
@@ -902,6 +755,71 @@ export function ModelViewport({
         ) : null}
       </div>
 
+        <div className={styles.topBar}>
+          <div className={styles.toolbar} role="toolbar" aria-label="模型查看工具栏">
+            <div className={styles.segment} role="group" aria-label="模型操作">
+              <button
+                type="button"
+                className={classNames(styles.iconButton, mode === 'orbit' && styles.iconButtonActive)}
+                aria-label="环绕模式"
+                aria-pressed={mode === 'orbit'}
+                title="环绕：左键旋转，中键平移，滚轮缩放"
+                onClick={() => changeMode('orbit')}
+              >
+                <OrbitIcon /><span>环绕</span>
+              </button>
+              <button
+                type="button"
+                className={classNames(styles.iconButton, mode === 'fly' && styles.iconButtonActive)}
+                aria-label="飞行模式"
+                aria-pressed={mode === 'fly'}
+                title={coarsePointer ? '飞行模式为桌面核心功能，触屏未启用' : '飞行：WASD 移动，Shift 加速，Ctrl 减速，右键观察'}
+                disabled={coarsePointer || !ready}
+                onClick={() => changeMode('fly')}
+              >
+                <FlyIcon /><span>飞行</span>
+              </button>
+              <button type="button" className={styles.iconButton} aria-label="复位视角" title="复位视角" disabled={!ready} onClick={resetView}>
+                <ResetIcon /><span>复位视角</span>
+              </button>
+              {onZoom ? <button type="button" className={styles.iconButton} data-action="zoom" aria-label={zoomed ? '恢复常规查看' : '放大查看'} title={zoomed ? '恢复常规查看' : '放大查看'} disabled={!ready} onClick={onZoom}>
+                <ZoomIcon /><span>{zoomed ? '恢复常规查看' : '放大查看'}</span>
+              </button> : null}
+              <button type="button" className={styles.iconButton} aria-label={fullscreen ? '退出全屏' : '全屏查看'} title={fullscreen ? '退出全屏' : '全屏查看'} onClick={() => void toggleFullscreen()}>
+                {fullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}<span>{fullscreen ? '退出全屏' : '全屏查看'}</span>
+              </button>
+            </div>
+
+            <div className={styles.moreWrap} ref={moreRef} data-viewer-shortcut-ignore="true">
+              <button ref={moreButtonRef} type="button" className={styles.moreButton}
+                aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={menuId} data-action="more"
+                onClick={() => { setSettingsOpen(false); setInfoOpen(false); setMoreOpen(!moreOpen) }}>… 更多</button>
+              {moreOpen ? <div id={menuId} className={styles.moreMenu} role="menu" aria-label="更多功能"
+                onKeyDown={(event) => {
+                  const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+                  const index = items.indexOf(document.activeElement as HTMLButtonElement)
+                  const key = event.key
+                  if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Tab'].includes(key)) return
+                  if (key === 'Tab') { setMoreOpen(false); moreButtonRef.current?.focus(); return }
+                  event.preventDefault()
+                  items[key === 'Home' ? 0 : key === 'End' ? items.length - 1 : (index + (key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus()
+                }}>
+                <button role="menuitem" disabled={!ready} onClick={() => runMenuAction(() => void capture())}><ImageIcon />保存 PNG 截图</button>
+                <button role="menuitem" disabled={!ready || recordingBusy} onClick={() => runMenuAction(() => void toggleRecording())}>{recording.recording ? <StopIcon /> : <RecordIcon />}{recordingBusy ? '正在停止录制' : recording.recording ? '停止录制' : '录制 35 秒'}</button>
+                {recordingResult && !recording.recording ? <button role="menuitem" onClick={() => runMenuAction(() => downloadRecording(recordingResult))}><ImageIcon />下载视频</button> : null}
+                <hr />
+                <button role="menuitem" disabled={Boolean(remote) && !ready} onClick={() => { setMoreOpen(false); setSettingsOpen(true) }}><SettingsIcon />显示设置</button>
+                <button role="menuitem" onClick={() => { setMoreOpen(false); setInfoOpen(true) }}><InfoIcon /><span>模型信息{modelingNote?.trim() ? <small>含建模说明</small> : null}</span></button>
+                {showEnd ? <><hr /><button role="menuitem" disabled={!onEnd} onClick={() => runMenuAction(() => void endPreview())}><CloseIcon />{endLabel}</button></> : null}
+              </div> : null}
+            </div>
+          </div>
+          <p className={styles.recordingLine} role="status">
+            {recording.recording ? recordingLabel : recordingResult ? recordingLabel : ''}
+          </p>
+        </div>
+
+
       {settingsOpen ? (
         <aside className={styles.settings} aria-label="显示设置" data-viewer-shortcut-ignore="true">
           <div className={styles.panelHead}>
@@ -913,102 +831,13 @@ export function ModelViewport({
               onClick={() => {
                 viewerRef.current?.endParameterInteraction()
                 setSettingsOpen(false)
-                setWalkSetupOpen(false)
+                moreButtonRef.current?.focus()
               }}
             >
               <CloseIcon />
             </button>
           </div>
 
-          {walkSetupOpen ? (
-            <section className={styles.walkSetup} aria-label="步行设置">
-              <h4 className={styles.panelTitle}>进入步行模式</h4>
-              <p className={styles.settingHint}>
-                Walk 只提供地面高度约束，不防穿墙，也没有真实碰撞。包围盒底部只是建议值，
-                必须确认后才会启用。
-              </p>
-              <div className={styles.settingRow}>
-                <label className={styles.settingLabel} htmlFor="viewer-walk-ground">
-                  地面高度
-                </label>
-                <input
-                  id="viewer-walk-ground"
-                  type="number"
-                  step="0.01"
-                  value={walkGround}
-                  onFocus={() => viewerRef.current?.beginParameterInteraction()}
-                  onBlur={() => viewerRef.current?.endParameterInteraction()}
-                  onChange={(event) => setWalkGround(Number(event.target.value))}
-                />
-                <output className={styles.mono}>相对单位</output>
-              </div>
-              <div className={styles.settingRow}>
-                <label className={styles.settingLabel} htmlFor="viewer-walk-eye">
-                  视角高
-                </label>
-                <input
-                  id="viewer-walk-eye"
-                  type="number"
-                  min="0.001"
-                  step="0.01"
-                  value={walkEye}
-                  onFocus={() => viewerRef.current?.beginParameterInteraction()}
-                  onBlur={() => viewerRef.current?.endParameterInteraction()}
-                  onChange={(event) => setWalkEye(Number(event.target.value))}
-                />
-                <output className={styles.mono}>相对单位</output>
-              </div>
-              <div className={styles.walkStartRow}>
-                <span className={styles.settingLabel}>起点 X / Y</span>
-                <input
-                  id="viewer-walk-start-x"
-                  aria-label="步行起点 X"
-                  type="number"
-                  step="0.01"
-                  value={walkStartX}
-                  onFocus={() => viewerRef.current?.beginParameterInteraction()}
-                  onBlur={() => viewerRef.current?.endParameterInteraction()}
-                  onChange={(event) => setWalkStartX(Number(event.target.value))}
-                />
-                <input
-                  id="viewer-walk-start-y"
-                  aria-label="步行起点 Y"
-                  type="number"
-                  step="0.01"
-                  value={walkStartY}
-                  onFocus={() => viewerRef.current?.beginParameterInteraction()}
-                  onBlur={() => viewerRef.current?.endParameterInteraction()}
-                  onChange={(event) => setWalkStartY(Number(event.target.value))}
-                />
-              </div>
-              <label className={styles.walkConfirm}>
-                <input
-                  type="checkbox"
-                  checked={walkConfirmed}
-                  onChange={(event) => setWalkConfirmed(event.target.checked)}
-                />
-                我确认仅地面高度约束，不是真实碰撞，也不防穿墙
-              </label>
-              <p className={styles.settingHint}>
-                {walkAreaTrusted
-                  ? '已配置可信有限步行区域；点击地面会二次确认后传送。'
-                  : '没有可信有限步行区域：点击传送已禁用，只能地面行走。'}
-              </p>
-              <div className={styles.settingsActions}>
-                <Button
-                  onClick={() => {
-                    viewerRef.current?.endParameterInteraction()
-                    setWalkSetupOpen(false)
-                  }}
-                >
-                  取消
-                </Button>
-                <Button variant="primary" disabled={!walkConfirmed} onClick={confirmWalk}>
-                  确认进入步行
-                </Button>
-              </div>
-            </section>
-          ) : null}
 
           <div className={styles.settingRow}>
             <label className={styles.settingLabel} htmlFor="viewer-source-up">
@@ -1053,7 +882,7 @@ export function ModelViewport({
           </div>
           <p className={styles.settingHint}>
             当前叠加：X {info?.orientation.x ?? 0} · Y {info?.orientation.y ?? 0} · Z {info?.orientation.z ?? 0}
-            （每轴 0–3 次 +90°）。方向改变会回到 Orbit，并作废旧 Walk 地面/区域确认，需重新确认。
+            （每轴 0–3 次 +90°）。方向改变会回到 Orbit，并重新适配模型视角。
           </p>
 
           <div className={styles.settingRow}>
@@ -1253,28 +1082,8 @@ export function ModelViewport({
             />
             <output className={styles.mono}>×{flySpeed.toFixed(2)}</output>
           </div>
-          <div className={styles.settingRow}>
-            <label className={styles.settingLabel} htmlFor="viewer-walk-speed">
-              步行相对速度
-            </label>
-            <input
-              id="viewer-walk-speed"
-              type="range"
-              min="0.05"
-              max="2"
-              step="0.05"
-              value={walkSpeed}
-              disabled={coarsePointer}
-              onPointerDown={() => viewerRef.current?.beginParameterInteraction()}
-              onPointerUp={() => viewerRef.current?.endParameterInteraction()}
-              onPointerCancel={() => viewerRef.current?.endParameterInteraction()}
-              onBlur={() => viewerRef.current?.endParameterInteraction()}
-              onChange={(event) => changeWalkSpeed(Number(event.target.value))}
-            />
-            <output className={styles.mono}>×{walkSpeed.toFixed(2)}</output>
-          </div>
           <p className={styles.settingHint}>
-            速度按模型尺度与 dt 计算；飞行/步行为桌面核心功能，触屏不启用。参数变化不重解析模型。
+            速度按模型尺度与 dt 计算；飞行为桌面核心功能，触屏不启用。参数变化不重解析模型。
           </p>
 
           <div className={styles.settingRow}>
@@ -1289,7 +1098,7 @@ export function ModelViewport({
             />
           </div>
           <p className={styles.settingHint}>
-            启用后仅画布内：单指旋转、双指平移与缩放；不劫持正文滚动。飞行/步行为桌面核心功能。
+            启用后仅画布内：单指旋转、双指平移与缩放；不劫持正文滚动。飞行为桌面核心功能。
           </p>
 
           <div className={styles.settingsActions}>

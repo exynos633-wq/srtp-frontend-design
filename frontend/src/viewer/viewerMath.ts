@@ -65,7 +65,7 @@ export function fitCameraToBounds(
   const size = new THREE.Vector3(...bounds.size)
   const target = new THREE.Vector3(...bounds.center)
   const radius = Math.max(size.length() / 2, 1e-6)
-  const direction = new THREE.Vector3(0.9, -1, 0.72).normalize()
+  const direction = new THREE.Vector3(0.8, -1, 0.72).normalize()
   const camera = new THREE.PerspectiveCamera(fovDeg, Math.max(0.2, aspect), 0.001, radius * 1000)
   camera.up.set(0, 0, 1)
   const corners = [

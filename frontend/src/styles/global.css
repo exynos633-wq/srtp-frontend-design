@@ -1,5 +1,14 @@
 @import "./tokens.css";
 
+@font-face {
+  font-family: "Display Sans SC";
+  src: url('../assets/fonts/DisplaySansSC.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+
 /* 基础重置与全站基线。局部视觉由各组件 CSS Modules 负责。 */
 
 *,

@@ -6,13 +6,12 @@ import styles from './PublicNav.module.css'
 const navItems = [
   { to: '/', label: '地图探索', end: true },
   { to: '/works', label: '全部作品', end: false },
-  { to: '/admin', label: '后台管理', end: false },
 ] as const
 
 /**
  * 公开端导航。
- * - <768：品牌行 56 + 导航行 44，两行实色。
- * - ≥768：单行 72，导航居中。
+ * - <768：品牌行 48 + 导航行 44，两行实色。
+ * - ≥768：单行 64，导航居中。
  * - 首页叠在场景上时使用玻璃（#080D12EB + 12px 模糊）；其他页保持实色。
  */
 interface PublicNavProps {
@@ -45,6 +44,7 @@ export function PublicNav({ overlay = false }: PublicNavProps) {
             ))}
           </ul>
         </nav>
+        <Link className={styles.admin} to="/admin">管理入口</Link>
       </div>
     </header>
   )

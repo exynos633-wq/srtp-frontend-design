@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { PreviewConfig } from '../../src/api/preview'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PreviewViewer } from '../../src/components/works/PreviewViewer'
 import type { PublicWork } from '../../src/types/work'
@@ -40,6 +41,49 @@ const start = () => fireEvent.click(screen.getByRole('button', { name: '开始�
 
 afterEach(() => {
   vi.unstubAllGlobals()
+})
+
+describe('远程外壳与自动降级（协议桩，不代表 GPU 验收）', () => {
+  const config: PreviewConfig = { workId: work.id, mode: 'remote', version: 'v1', source: modelSource, view: { sourceUp: 'z' } }
+
+  it('显式开始前不请求配置，断流只降级一次并重新检查权限', async () => {
+    const resolve = vi.fn().mockResolvedValue(config)
+    const ensure = vi.fn().mockResolvedValue(true)
+    render(<PreviewViewer work={work} resolvePreviewConfig={resolve} ensureAvailable={ensure} />)
+    expect(resolve).not.toHaveBeenCalled()
+    start()
+    const stub = await screen.findByTestId('model-viewport-stub')
+    expect(stub).toHaveAttribute('data-remote', 'true')
+    expect(await screen.findByText('真实模型 · GPU 远程渲染')).toBeVisible()
+    fireEvent.click(screen.getByText('协议桩：断流'))
+    await waitFor(() => expect(screen.getByTestId('model-viewport-stub')).toHaveAttribute('data-remote', 'false'))
+    expect(resolve).toHaveBeenCalledTimes(2)
+    expect(ensure).toHaveBeenCalledTimes(2)
+    expect(screen.getByText('远程预览暂不可用，已切换本机渲染。')).toBeVisible()
+    expect(screen.queryByText('协议桩：断流')).toBeNull()
+  })
+
+  it('降级时作品已下架，不挂载客户端查看器', async () => {
+    const ensure = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+    const resolve = vi.fn().mockResolvedValue(config)
+    render(<PreviewViewer work={work} resolvePreviewConfig={resolve} ensureAvailable={ensure} />)
+    start()
+    fireEvent.click(await screen.findByText('协议桩：断流'))
+    expect(await screen.findByText('作品当前不可预览')).toBeVisible()
+    expect(screen.queryByTestId('model-viewport-stub')).toBeNull()
+    expect(resolve).toHaveBeenCalledTimes(1)
+  })
+
+  it('结束之后迟到的配置不会恢复查看器', async () => {
+    let release!: (value: PreviewConfig) => void
+    const resolve = vi.fn(() => new Promise<PreviewConfig>((done) => { release = done }))
+    render(<PreviewViewer work={work} resolvePreviewConfig={resolve} />)
+    start()
+    fireEvent.click(screen.getByText('结束预览'))
+    await act(async () => { release(config) })
+    expect(screen.queryByTestId('model-viewport-stub')).toBeNull()
+    expect(screen.getByText('预览已结束')).toBeVisible()
+  })
 })
 
 describe('观看区外壳的真实生命周期边界', () => {

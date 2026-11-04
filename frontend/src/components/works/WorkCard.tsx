@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router'
+import type { ModelFormat } from '../../types/work'
 import styles from './WorkCard.module.css'
 
 export interface WorkCardOpenSource {
@@ -16,6 +17,9 @@ export interface WorkCardProps {
   /** 未填城市显示“未设置城市”，不作为错误状态。 */
   cityName?: string | null
   coverUrl?: string | null
+  index?: number
+  description?: string
+  modelFormat?: ModelFormat
   /** 仅用于目录内的选中态示意，不替代业务状态文字。 */
   selected?: boolean
   /** 仅用于同页导航的来源记录；新标签页、键盘菜单等不传来源。 */
@@ -28,6 +32,9 @@ export function WorkCard({
   title,
   cityName,
   coverUrl,
+  index,
+  description,
+  modelFormat,
   selected = false,
   onOpen,
 }: WorkCardProps) {
@@ -57,7 +64,7 @@ export function WorkCard({
   }
 
   return (
-    <li className={styles.item} data-work-card data-work-id={workId}>
+    <li className={styles.item} data-work-card data-work-id={workId} data-featured={index === 1 ? 'true' : undefined}>
       <Link
         id={`work-card-link-${workId}`}
         className={styles.card}
@@ -89,8 +96,16 @@ export function WorkCard({
           )}
         </span>
         <span className={styles.body}>
+          <span className={styles.caption}>
+            {index !== undefined ? <span className={styles.number} aria-hidden="true">{String(index).padStart(2, '0')} <span>/</span></span> : null}
+            <span className={styles.city}>{cityName ?? '未设置城市'}</span>
+          </span>
           <h3 className={styles.title}>{title}</h3>
-          <span className={styles.city}>{cityName ?? '未设置城市'}</span>
+          {description ? <span className={styles.description}>{description}</span> : null}
+          <span className={styles.foot}>
+            <span className={styles.format}>{modelFormat === 'gaussian-ply' ? '高斯泼溅' : modelFormat === 'mesh-ply' ? '网格模型' : modelFormat === 'glb' ? '三维模型' : '空间作品'}</span>
+            <span className={styles.entry}>查看作品 <span className={styles.arrow} aria-hidden="true">↗</span></span>
+          </span>
         </span>
       </Link>
     </li>

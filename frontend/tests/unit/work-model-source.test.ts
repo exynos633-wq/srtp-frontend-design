@@ -26,6 +26,7 @@ import { ApiError } from '../../src/api/http'
 import {
   resolveAdminWorkModelSource,
   resolveWorkModelSource,
+  resolvePreviewConfig,
 } from '../../src/viewer/workModelSource'
 
 const config = {
@@ -54,6 +55,23 @@ describe('预览配置来源适配', () => {
     state.active = false
     state.devCalls = 0
     api.request.mockReset()
+  })
+
+  it('完整配置保留远程策略、版本与视角，忽略历史接口中的 null 参数', async () => {
+    api.request.mockResolvedValue({ ...config, mode: 'remote' })
+    const result = await resolvePreviewConfig(config.workId)
+    expect(result.mode).toBe('remote')
+    expect(result.version).toBe('asset_1')
+    expect(result.view.sourceUp).toBe('y')
+    expect(result.view.eyeHeight).toBeUndefined()
+    expect(result.source?.kind).toBe('url')
+  })
+
+  it('远程配置缺失版本或串用另一作品时拒绝继续', async () => {
+    api.request.mockResolvedValueOnce({ ...config, mode: 'remote', source: null })
+    await expect(resolvePreviewConfig(config.workId)).rejects.toThrow('缺少资源版本')
+    api.request.mockResolvedValueOnce({ ...config, workId: 'other' })
+    await expect(resolvePreviewConfig(config.workId)).rejects.toThrow('不一致')
   })
 
   it('公开端读取作品 preview-config 并返回 URL 来源', async () => {

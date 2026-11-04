@@ -157,14 +157,9 @@ export class ModelViewer {
   private initialCamera: CameraSnapshot | null = null
   private boundsCenter = new THREE.Vector3()
   private boundsRadius = 1
-  private groundHeight = 0
-  private eyeHeight = 0.1
   private sourceUpOverride: SourceUp | null = null
   private orientationCorrection: OrientationCorrection = { x: 0, y: 0, z: 0 }
-  private directionInvalidatedWalk = false
-  private walkSetup: { ground: number; eyeHeight: number; start: [number, number] } | null = null
   private flySpeed: number
-  private walkSpeed: number
 
   private display: DisplayState = { ...DISPLAY_DEFAULTS }
   private lights: THREE.Group | null = null
@@ -177,7 +172,7 @@ export class ModelViewer {
   private keys = new Set<string>()
   private capturedPointers = new Set<number>()
   private drag: {
-    kind: 'rotate' | 'pan' | 'look' | 'walkClick'
+    kind: 'rotate' | 'pan' | 'look'
     pointerId: number
     startX: number
     startY: number
@@ -220,7 +215,6 @@ export class ModelViewer {
     this.options = options
     this.phase = 'idle'
     this.flySpeed = options.flySpeed ?? 0.6
-    this.walkSpeed = options.walkSpeed ?? 0.3
     const lowPower = options.lowPower ?? isLowPowerDevice()
     const dpr = resolveDpr(options.dprCap ?? DEFAULT_DPR_CAP, lowPower)
 
@@ -317,7 +311,6 @@ export class ModelViewer {
   }
 
   getDebugState(): Record<string, unknown> {
-    const effectiveWalk = this.effectiveWalkConfig()
     return {
       phase: this.phase,
       mode: this.mode,
@@ -346,13 +339,7 @@ export class ModelViewer {
       display: { ...this.display },
       sourceUpOverride: this.sourceUpOverride,
       orientation: { ...this.orientationCorrection },
-      speed: { fly: this.flySpeed, walk: this.walkSpeed },
-      walk: {
-        ground: effectiveWalk.ground,
-        eyeHeight: effectiveWalk.eyeHeight,
-        start: effectiveWalk.start,
-        areaTrusted: effectiveWalk.areaTrusted,
-      },
+      speed: { fly: this.flySpeed },
       timings: { ...this.timings },
     }
   }
@@ -382,8 +369,6 @@ export class ModelViewer {
     this.clearInput()
     this.sourceUpOverride = config.sourceUp ?? null
     this.orientationCorrection = normalizeOrientation(config.orientation)
-    this.directionInvalidatedWalk = false
-    this.walkSetup = null
     this.mode = 'orbit'
     this.autoRotate.pause(performance.now())
     this.emit({ type: 'mode', mode: 'orbit' })
@@ -464,7 +449,7 @@ export class ModelViewer {
   }
 
   setMode(mode: ViewerMode): void {
-    if (this.mode === mode) return
+    if (!['orbit', 'fly'].includes(mode) || this.mode === mode) return
     this.parameterInteractionActive = false
     this.clearInput()
     this.mode = mode
@@ -478,7 +463,6 @@ export class ModelViewer {
       this.autoRotate.resume(now)
     } else {
       this.syncYawPitchFromCamera()
-      if (mode === 'walk') this.enterWalkPose()
       this.autoRotate.pause(now)
     }
     this.emit({ type: 'mode', mode })
@@ -585,7 +569,6 @@ export class ModelViewer {
     this.orbitTarget.copy(this.initialCamera.target)
     this.syncOrbitFromCamera()
     this.syncYawPitchFromCamera()
-    if (this.mode === 'walk') this.enterWalkPose()
     this.autoRotate.noteInteraction(performance.now())
   }
 
@@ -894,9 +877,6 @@ export class ModelViewer {
     this.boundsCenter.set(...bounds.center)
     const size = new THREE.Vector3(...bounds.size)
     this.boundsRadius = Math.max(size.length() / 2, 1e-5)
-    this.directionInvalidatedWalk = true
-    this.walkSetup = null
-    this.setupGroundAndEye()
     this.setupLights(model.format === 'glb' || model.format === 'mesh-ply')
     this.applyLights()
     this.setupCamera(model, false)
@@ -925,6 +905,7 @@ export class ModelViewer {
       target = new THREE.Vector3(...this.config.initialCamera.target)
     }
     this.camera.position.copy(position)
+    this.orbitTarget.copy(target)
     this.camera.up.set(0, 0, 1)
     this.camera.lookAt(target)
     this.initialCamera = {
@@ -933,82 +914,10 @@ export class ModelViewer {
       target: target.clone(),
     }
 
-    this.setupGroundAndEye()
-  }
-
-  private setupGroundAndEye(): void {
-    const effective = this.effectiveWalkConfig()
-    this.groundHeight = effective.ground
-    this.eyeHeight = effective.eyeHeight
-  }
-
-  /**
-   * Walk 的唯一有效配置来源。方向改变后旧 ground/eye/start/area 全部作废；
-   * 不可信 area 既不参与起点夹取，也不参与点击传送。
-   */
-  private effectiveWalkConfig(): {
-    ground: number
-    eyeHeight: number
-    start: [number, number]
-    area: ModelViewConfig['walkArea']
-    areaTrusted: boolean
-  } {
-    const bounds = this.info?.bounds
-    const host = this.directionInvalidatedWalk
-      ? { ground: undefined, eyeHeight: undefined, start: undefined, area: null, areaTrusted: false }
-      : {
-          ground: this.config.ground?.height,
-          eyeHeight: this.config.eyeHeight,
-          start: this.config.walkStart ?? undefined,
-          area: this.config.walkAreaTrusted ? this.config.walkArea ?? null : null,
-          areaTrusted: Boolean(this.config.walkArea && this.config.walkAreaTrusted),
-        }
-    const start: [number, number] =
-      this.walkSetup?.start ?? host.start ?? [this.camera.position.x, this.camera.position.y]
-    return {
-      ground: this.walkSetup?.ground ?? host.ground ?? bounds?.min[2] ?? 0,
-      eyeHeight: this.walkSetup?.eyeHeight ?? host.eyeHeight ?? Math.max(this.boundsRadius * 0.08, 0.001),
-      start,
-      area: host.area,
-      areaTrusted: host.areaTrusted,
-    }
-  }
-
-  getWalkDefaults(): {
-    ground: number
-    eyeHeight: number
-    start: [number, number]
-    area: ModelViewConfig['walkArea']
-    areaTrusted: boolean
-  } {
-    return this.effectiveWalkConfig()
-  }
-
-  configureWalk(config: { ground: number; eyeHeight: number; start: [number, number] }): void {
-    const { ground, eyeHeight, start } = config
-    if (
-      !Number.isFinite(ground) ||
-      !Number.isFinite(eyeHeight) ||
-      eyeHeight <= 0 ||
-      !Number.isFinite(start[0]) ||
-      !Number.isFinite(start[1])
-    ) {
-      throw new ViewerError('INVALID_BOUNDS', '步行参数必须是有限数值，视角高必须大于 0。')
-    }
-    this.walkSetup = { ground, eyeHeight, start }
-    this.groundHeight = ground
-    this.eyeHeight = eyeHeight
-    if (this.mode === 'walk') this.enterWalkPose()
-    this.noteParameterInteraction()
   }
 
   setFlySpeed(value: number): void {
     if (Number.isFinite(value) && value > 0) this.flySpeed = clamp(value, 0.05, 5)
-    this.noteParameterInteraction()
-  }
-
-  setWalkSpeed(value: number): void {
-    if (Number.isFinite(value) && value > 0) this.walkSpeed = clamp(value, 0.05, 5)
     this.noteParameterInteraction()
   }
 
@@ -1109,19 +1018,6 @@ export class ModelViewer {
     this.camera.lookAt(this.camera.position.clone().add(direction))
   }
 
-  private enterWalkPose(): void {
-    const effective = this.effectiveWalkConfig()
-    let [x, y] = effective.start
-    if (effective.areaTrusted && effective.area) {
-      x = clamp(x, effective.area.minX, effective.area.maxX)
-      y = clamp(y, effective.area.minY, effective.area.maxY)
-    }
-    this.groundHeight = effective.ground
-    this.eyeHeight = effective.eyeHeight
-    this.camera.position.set(x, y, effective.ground + effective.eyeHeight)
-    this.applyYawPitch()
-  }
-
   private startLoop(): void {
     if (this.raf !== null || this.disposed || !this.visible) return
     if (this.phase !== 'ready') return
@@ -1167,8 +1063,6 @@ export class ModelViewer {
     }
     if (this.mode === 'fly') {
       this.updateFly(delta)
-    } else {
-      this.updateWalk(delta)
     }
   }
 
@@ -1192,21 +1086,6 @@ export class ModelViewer {
     if (move.lengthSq() === 0) return
     const speed = this.movementSpeed(this.flySpeed)
     this.camera.position.addScaledVector(move.normalize(), speed * delta)
-  }
-
-  private updateWalk(delta: number): void {
-    const forward = directionFromYawPitch(this.yaw, 0)
-    const right = forward.clone().cross(new THREE.Vector3(0, 0, 1)).normalize()
-    const move = new THREE.Vector3()
-    if (this.keys.has('KeyW')) move.add(forward)
-    if (this.keys.has('KeyS')) move.sub(forward)
-    if (this.keys.has('KeyD')) move.add(right)
-    if (this.keys.has('KeyA')) move.sub(right)
-    if (move.lengthSq() !== 0) {
-      const speed = this.movementSpeed(this.walkSpeed)
-      this.camera.position.addScaledVector(move.normalize(), speed * delta)
-    }
-    this.camera.position.z = this.groundHeight + this.eyeHeight
   }
 
   private resize(): void {
@@ -1426,7 +1305,7 @@ export class ModelViewer {
     if (event.button === 0) {
       if (this.mode === 'fly') return
       this.drag = {
-        kind: this.mode === 'orbit' ? 'rotate' : 'walkClick',
+        kind: this.mode === 'orbit' ? 'rotate' : 'look',
         pointerId: event.pointerId,
         startX: point.x,
         startY: point.y,
@@ -1478,7 +1357,6 @@ export class ModelViewer {
         const dy = point.y - this.touchLast.y
         this.touchLast = { ...point, distance: 0, midX: point.x, midY: point.y }
         if (this.mode === 'orbit') this.rotateOrbit(dx, dy)
-        else if (this.mode === 'fly' || this.mode === 'walk') this.look(dx, dy)
         this.noteInteraction()
       } else if (this.touchPointers.size >= 2) {
         const next = this.touchState()
@@ -1523,9 +1401,6 @@ export class ModelViewer {
     const drag = this.drag
     this.drag = null
     if (!drag) return
-    if (drag.kind === 'walkClick' && !drag.moved) {
-      this.tryWalkTeleport(this.localPoint(event))
-    }
     this.autoRotate.endInteraction(performance.now())
   }
 
@@ -1579,31 +1454,6 @@ export class ModelViewer {
     const forward = new THREE.Vector3()
     this.camera.getWorldDirection(forward)
     this.camera.position.addScaledVector(forward, delta * this.boundsRadius * 0.002)
-    if (this.mode === 'walk') this.camera.position.z = this.groundHeight + this.eyeHeight
-  }
-
-  private tryWalkTeleport(point: { x: number; y: number }): void {
-    if (this.mode !== 'walk') return
-    const effective = this.effectiveWalkConfig()
-    const area = effective.area
-    if (!area || !effective.areaTrusted) return
-    const rect = this.canvas.getBoundingClientRect()
-    const ndc = new THREE.Vector2((point.x / rect.width) * 2 - 1, -(point.y / rect.height) * 2 + 1)
-    const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(ndc, this.camera)
-    if (Math.abs(raycaster.ray.direction.z) < 1e-6) return
-    const t = (effective.ground - raycaster.ray.origin.z) / raycaster.ray.direction.z
-    if (t <= 0) return
-    const target = raycaster.ray.at(t, new THREE.Vector3())
-    if (target.x < area.minX || target.x > area.maxX || target.y < area.minY || target.y > area.maxY) {
-      return
-    }
-    const confirmed = window.confirm(
-      'Walk 只提供地面高度约束，不防穿墙，也没有真实碰撞。确认传送到该点吗？',
-    )
-    if (!confirmed) return
-    this.camera.position.set(target.x, target.y, effective.ground + effective.eyeHeight)
-    this.noteInteraction()
   }
 
   private onWheel = (event: WheelEvent): void => {
@@ -1631,7 +1481,7 @@ export class ModelViewer {
       this.resetView()
       return
     }
-    // 只有 Fly/Walk 才消费 WASD；Orbit 下不拦截 Ctrl+W/A/S/D 等浏览器组合。
+    // 只有 Fly 才消费 WASD；Orbit 下不拦截 Ctrl+W/A/S/D 等浏览器组合。
     if (movementKey && this.mode === 'orbit') return
     if (movementKey && event.ctrlKey) event.preventDefault()
     if (movementKey && !this.keys.has(code)) {

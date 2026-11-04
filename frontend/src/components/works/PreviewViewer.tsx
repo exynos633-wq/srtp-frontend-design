@@ -7,6 +7,8 @@ import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
 import { takeCoverSource, type CoverSource } from '../../lib/worksNavigation'
 import type { ModelFormat } from '../../types/work'
 import type { ModelSource, ModelViewConfig, ViewerPhase } from '../../viewer/types'
+import { shouldFallback } from '../../api/preview'
+import type { PreviewConfig, RemotePreview } from '../../api/preview'
 import { Button } from '../ui/Button'
 import styles from './PreviewViewer.module.css'
 
@@ -36,6 +38,7 @@ export interface PreviewWork {
   id: string
   name: string
   coverUrl: string
+  modelingNote?: string | null
   modelFormat?: ModelFormat | null
 }
 
@@ -51,6 +54,8 @@ export interface PreviewViewerProps {
   modelSource?: ModelSource | null
   /** 显式开始且可用性检查通过后调用，生产宿主可在此接入自身资源接口。 */
   resolveModelSource?: (workId: string) => Promise<ModelSource | null>
+  resolvePreviewConfig?: (workId: string) => Promise<PreviewConfig>
+  adminPreview?: boolean
   viewConfig?: ModelViewConfig
   dprCap?: number
 }
@@ -62,6 +67,8 @@ export function PreviewViewer({
   onPreviewStarted,
   modelSource,
   resolveModelSource,
+  resolvePreviewConfig,
+  adminPreview = false,
   viewConfig,
   dprCap,
 }: PreviewViewerProps) {
@@ -82,6 +89,10 @@ export function PreviewViewer({
   const [checkError, setCheckError] = useState('')
   const [zoomOpen, setZoomOpen] = useState(false)
   const [resolvedSource, setResolvedSource] = useState<ModelSource | null>(modelSource ?? null)
+  const [remote, setRemote] = useState<RemotePreview | null>(null)
+  const [previewConfig, setPreviewConfig] = useState<ModelViewConfig | null>(null)
+  const [fallbackNotice, setFallbackNotice] = useState('')
+  const fallbackAttemptedRef = useRef(false)
 
   const sourceRef = useRef<CoverSource | null>(null)
   const sourceResolvedRef = useRef(false)
@@ -90,6 +101,7 @@ export function PreviewViewer({
   const ensureAvailableRef = useRef(ensureAvailable)
   const onPreviewStartedRef = useRef(onPreviewStarted)
   const resolveModelSourceRef = useRef(resolveModelSource)
+  const configResolverRef = useRef(resolvePreviewConfig)
   const startedRef = useRef(false)
   const statusRef = useRef<PreviewStatus>('idle')
   const attemptRef = useRef(0)
@@ -109,7 +121,8 @@ export function PreviewViewer({
     ensureAvailableRef.current = ensureAvailable
     onPreviewStartedRef.current = onPreviewStarted
     resolveModelSourceRef.current = resolveModelSource
-  }, [ensureAvailable, onPreviewStarted, resolveModelSource])
+    configResolverRef.current = resolvePreviewConfig
+  }, [ensureAvailable, onPreviewStarted, resolveModelSource, resolvePreviewConfig])
 
   useEffect(() => {
     window.queueMicrotask(() => setResolvedSource(modelSource ?? null))
@@ -212,14 +225,35 @@ export function PreviewViewer({
     }
     attemptRef.current += 1
     const attempt = attemptRef.current
+    statusRef.current = 'checking'
     setCheckError('')
+    setFallbackNotice('')
+    fallbackAttemptedRef.current = false
+    setRemote(null)
     setStatus('checking')
 
     const startViewer = async () => {
       if (attempt !== attemptRef.current) return
       let nextSource = modelSource ?? null
+      const configResolver = configResolverRef.current
+      if (configResolver && !modelSource) {
+        try {
+          const config = await configResolver(work.id)
+          if (attempt !== attemptRef.current) return
+          nextSource = config.source
+          setPreviewConfig(config.view)
+          setRemote(config.mode === 'remote' ? {
+            workId: work.id, admin: adminPreview, version: config.version!, format: work.modelFormat ?? 'glb',
+          } : null)
+        } catch (failure) {
+          if (attempt !== attemptRef.current) return
+          setCheckError(failure instanceof Error ? failure.message : '无法读取预览配置。')
+          setStatus('check-error')
+          return
+        }
+      }
       const resolver = resolveModelSourceRef.current
-      if (!nextSource && resolver) {
+      if (!configResolver && !nextSource && resolver) {
         try {
           nextSource = await resolver(work.id)
         } catch (failure) {
@@ -256,9 +290,44 @@ export function PreviewViewer({
       })
   }
 
+  const handleRemoteFailure = useCallback((failure: unknown) => {
+    if (fallbackAttemptedRef.current || statusRef.current === 'ended') return
+    fallbackAttemptedRef.current = true
+    if (!shouldFallback(failure)) {
+      setCheckError(failure instanceof Error ? failure.message : '远程预览不可用。')
+      setStatus('check-error')
+      return
+    }
+    const attempt = ++attemptRef.current
+    statusRef.current = 'checking'
+    setStatus('checking') // 卸载远程实例后，再检查当前权限与资源。
+    setRemote(null)
+    setFallbackNotice('远程预览暂不可用，正在切换本机渲染；将下载模型文件。')
+    void (async () => {
+      try {
+        if (ensureAvailableRef.current && !await ensureAvailableRef.current()) {
+          if (attempt === attemptRef.current) setStatus('unavailable')
+          return
+        }
+        const config = await configResolverRef.current?.(work.id)
+        if (attempt !== attemptRef.current) return
+        if (!config?.source) throw new Error('尚未配置可用的本机模型来源。')
+        setResolvedSource(config.source)
+        setPreviewConfig(config.view)
+        setFallbackNotice('远程预览暂不可用，已切换本机渲染。')
+        setStatus('loading')
+      } catch (error) {
+        if (attempt !== attemptRef.current) return
+        setCheckError(error instanceof Error ? error.message : '切换本机渲染失败。')
+        setStatus('check-error')
+      }
+    })()
+  }, [work.id])
+
   const endPreview = () => {
     if (statusRef.current === 'ended' || statusRef.current === 'idle') return
     attemptRef.current += 1
+    statusRef.current = 'ended'
     setStatus('ended')
     window.requestAnimationFrame(() => {
       const selector = zoomOpen ? '[data-action="close-zoom"]' : '[data-action="start"]'
@@ -465,8 +534,8 @@ export function PreviewViewer({
 
   let hintText = '开始预览后才下载并解析真实模型'
   if (status === 'checking') hintText = '正在确认作品当前公开状态'
-  else if (status === 'loading') hintText = '正在加载真实模型'
-  else if (status === 'interactive') hintText = '真实模型 · 本地客户端渲染'
+  else if (status === 'loading') hintText = remote ? '正在连接远程渲染画面' : '正在加载真实模型'
+  else if (status === 'interactive') hintText = remote ? '真实模型 · GPU 远程渲染' : '真实模型 · 本地客户端渲染'
   else if (status === 'viewer-error') hintText = '加载失败 · 未显示替代模型'
   else if (status === 'unavailable') hintText = '作品不可预览'
   else if (status === 'check-error') hintText = '可用性检查失败'
@@ -521,21 +590,28 @@ export function PreviewViewer({
                 }
               >
                 <ModelViewport
+                  key={remote ? 'remote' : 'client'}
                   source={resolvedSource}
+                  remote={remote}
+                  onRemoteFailure={handleRemoteFailure}
                   modelName={work.name}
+                  modelingNote={work.modelingNote}
+                  zoomed={zoomOpen}
                   modelFormat={work.modelFormat}
-                  viewConfig={resolvedConfig}
+                  viewConfig={previewConfig ?? resolvedConfig}
                   dprCap={dprCap}
                   onPhase={handleViewerPhase}
                   onReady={handleViewerReady}
                   onError={handleViewerError}
                   onRetry={beginPreview}
                   onEnd={endPreview}
-                  onZoom={status === 'interactive' ? openZoom : undefined}
+                  onZoom={status === 'interactive' ? (zoomOpen ? closeZoom : openZoom) : undefined}
                   showEnd
                 />
               </Suspense>
             ) : null}
+
+          </div>
 
             {showPreStartPanel ? (
               <div
@@ -549,7 +625,7 @@ export function PreviewViewer({
                   <>
                     <p className={styles.statusTitle}>封面待预览</p>
                     <p className={styles.statusText}>
-                      开始后才创建本地客户端查看器并下载真实模型；当前不下载模型，也不创建远程会话。
+                      点击开始后才准备模型预览；远程渲染不可用时会自动切换本机渲染并下载模型。
                     </p>
                     <div className={styles.statusAction}>
                       <Button variant="primary" data-action="start" onClick={beginPreview}>
@@ -562,7 +638,7 @@ export function PreviewViewer({
                 {status === 'checking' ? (
                   <>
                     <p className={styles.statusTitle}>正在确认作品可用性</p>
-                    <p className={styles.statusText}>通过公开读取边界确认后才开始下载模型。</p>
+                    <p className={styles.statusText}>{fallbackNotice || '确认当前权限后准备模型预览。'}</p>
                   </>
                 ) : null}
 
@@ -601,12 +677,12 @@ export function PreviewViewer({
                 ) : null}
               </div>
             ) : null}
-          </div>
 
           <div className={styles.footer}>
+            {fallbackNotice ? <p className={styles.fallbackNotice} role="status">{fallbackNotice}</p> : null}
             <p className={styles.hint}>{hintText}</p>
             <p className={styles.format}>
-              {work.modelFormat === 'gaussian-ply' ? '3DGS 高斯 PLY' : 'glTF 2.0 GLB'}
+              {work.modelFormat === 'gaussian-ply' ? '3DGS 高斯 PLY' : work.modelFormat === 'mesh-ply' ? 'PLY 网格' : 'glTF 2.0 GLB'}
             </p>
             {canEnd && !activeViewer ? (
               <div className={styles.controls}>

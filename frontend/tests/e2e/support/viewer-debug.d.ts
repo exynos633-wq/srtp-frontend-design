@@ -21,7 +21,7 @@ export interface ViewerDebug {
     shDegree: number | null
     sourceUp: string
     orientation: { x: number; y: number; z: number }
-    bounds: { size: number[] }
+    bounds: { size: number[]; center: number[] }
   } | null
   stats: {
     width: number
@@ -49,8 +49,7 @@ export interface ViewerDebug {
   }
   sourceUpOverride: 'y' | 'z' | null
   orientation: { x: number; y: number; z: number }
-  speed: { fly: number; walk: number }
-  walk: { ground: number; eyeHeight: number; start: [number, number] | null; areaTrusted: boolean }
+  speed: { fly: number }
   recording: {
     elapsedMs: number
     width: number
