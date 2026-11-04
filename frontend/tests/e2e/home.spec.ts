@@ -145,7 +145,8 @@ test('返回首页恢复视角并且不重播开场', async ({ page }) => {
   await waitForSettledHome(page)
 
   const initialBox = await cityPoint(page, '北京市').boundingBox()
-  await page.mouse.click(120, 650)
+  // 新首页左侧大标题与目录入口占据 (120,650)，直接聚焦场景再按键，避免离开首页。
+  await page.locator('[data-globe-stage]').focus()
   await page.keyboard.press('+')
   await page.keyboard.press('+')
   await page.waitForTimeout(250)
@@ -153,7 +154,11 @@ test('返回首页恢复视角并且不重播开场', async ({ page }) => {
   expect(zoomedBox).not.toBeNull()
   expect((zoomedBox?.x ?? 0) - (initialBox?.x ?? 0)).toBeGreaterThan(5)
 
-  await page.getByRole('link', { name: '全部作品' }).click()
+  // 首页新增“浏览全部作品”入口后名称包含“全部作品”，按主导航精确匹配。
+  await page
+    .getByRole('navigation', { name: '公开展示区导航' })
+    .getByRole('link', { name: '全部作品', exact: true })
+    .click()
   await expect(page.getByRole('heading', { name: '全部作品' })).toBeVisible()
   await page.goBack()
 
@@ -225,7 +230,7 @@ test('390 与 320 手机构图可用，提示不压住元信息', async ({ page 
   await expect(page.getByText('单指旋转 · 双指缩放')).toBeVisible()
 
   const hint = await page.getByText('单指旋转 · 双指缩放').boundingBox()
-  const meta = await page.getByText('演示地球 · 正式地理素材待接入').boundingBox()
+  const meta = await page.getByText('地球影像：NASA Blue Marble').boundingBox()
   expect(hint).not.toBeNull()
   expect(meta).not.toBeNull()
   expect((hint?.y ?? 0) + (hint?.height ?? 0)).toBeLessThanOrEqual(meta?.y ?? 0)

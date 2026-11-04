@@ -1,0 +1,14 @@
+.wrap {
+  display: inline-flex;
+}
+
+.inner {
+  display: inline-flex;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner {
+    will-change: auto;
+  }
+}

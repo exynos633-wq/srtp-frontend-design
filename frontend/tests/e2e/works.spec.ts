@@ -134,6 +134,7 @@ test('预览状态机：开始后真实加载、结束卸载与重新开始不�
 })
 
 test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预览', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/works/work_demo_001')
   await page.getByRole('button', { name: '开始预览' }).click()
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible({ timeout: 60_000 })
@@ -141,6 +142,10 @@ test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预�
   await page.getByRole('button', { name: '放大查看', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '放大查看：院落模型' })
   await expect(dialog).toBeVisible()
+  // 上台与放大动画结束后，fixed 弹层应覆盖视口，而不是受观看框包含块限制。
+  await expect.poll(() => dialog.boundingBox()).toEqual({
+    x: 24, y: 24, width: 1392, height: 852,
+  })
   await expect(page.locator('[data-action="close-zoom"]')).toBeFocused()
   await expect(page.locator('section[aria-label^="放大查看"]')).toHaveCount(1)
   // 焦点循环包含 new input/select 等可聚焦控件，Shift+Tab 不能离开对话框。
@@ -153,6 +158,23 @@ test('放大使用同一观看区，Esc 关闭回到放大按钮且不结束预�
   await expect(dialog).toHaveCount(0)
   await expect(page.getByRole('button', { name: '放大查看', exact: true })).toBeFocused()
   await expect(page.locator('[data-viewer-phase="ready"]')).toBeVisible()
+})
+
+test('封面视差随运行时减少动态偏好停止并可恢复', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await gotoDirectory(page)
+  const cover = page.locator('[data-work-card][data-featured="true"] img')
+  const parallax = () => cover.evaluate((image: HTMLElement) => image.style.getPropertyValue('--parallax-y'))
+  await expect.poll(parallax).not.toBe('')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(parallax).toBe('')
+  await cover.scrollIntoViewIfNeeded()
+  await expect(cover).toHaveCSS('translate', '0px')
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect.poll(parallax).not.toBe('')
 })
 
 test('目录到详情发生共享封面克隆，结束后不残留遮罩或克隆', async ({ page }) => {

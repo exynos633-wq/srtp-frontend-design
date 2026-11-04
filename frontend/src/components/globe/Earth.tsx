@@ -22,6 +22,23 @@ const ATMO = '#85bde5'
 const GRID = '#395962'
 // Slightly exaggerate cloud altitude so the separation reads at homepage scale.
 const CLOUD_RADIUS = 1.022
+/**
+ * 大气辉光呼吸范围（v2.1 §4.1）：以 P0 的 0.48 边缘光为基线，0.42→0.52 做 8s 正弦；
+ * 减少动态固定 0.42（不低于 P0 的可见度）。
+ */
+const ATMO_OPACITY_MIN = 0.42
+const ATMO_OPACITY_RANGE = 0.1
+
+/**
+ * Three 侧没有 CSS 变量可读，按月令牌 --dur-breath 取呼吸周期；
+ * 减少动态下令牌为 0s，此时呼吸本来就不播，退回默认周期即可。
+ */
+function readBreathSeconds() {
+  const value = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--dur-breath'),
+  )
+  return Number.isFinite(value) && value > 0 ? value : 8
+}
 
 /**
  * 彩色地球：NASA Blue Marble 纹理 + 局部经纬弧 + 冷青边缘光。
@@ -29,7 +46,8 @@ const CLOUD_RADIUS = 1.022
  */
 export function Earth({ reducedMotion }: { reducedMotion: boolean }) {
   const cloudRef = useRef<Mesh>(null)
-  const earthTextureUrl = window.matchMedia('(max-width: 767px)').matches ? earthMobileUrl : earthDesktopUrl
+  const mobile = window.matchMedia('(max-width: 767px)').matches
+  const earthTextureUrl = mobile ? earthMobileUrl : earthDesktopUrl
   const [source, clouds] = useLoader(TextureLoader, [earthTextureUrl, earthCloudsUrl])
   const sunDirection = useMemo(() => new Vector3(), [])
   const texture = useMemo(() => {
@@ -62,7 +80,7 @@ export function Earth({ reducedMotion }: { reducedMotion: boolean }) {
         <meshStandardMaterial color="#ffffff" alphaMap={clouds} displacementMap={clouds} displacementScale={0.006} bumpMap={clouds} bumpScale={0.018} transparent opacity={0.9} depthWrite={false} roughness={1} />
       </mesh>
       <Graticule />
-      <Atmosphere />
+      <Atmosphere reducedMotion={reducedMotion} mobile={mobile} />
     </group>
   )
 }
@@ -139,11 +157,18 @@ function CloudShadow({ clouds, sunDirection, cloudRef }: { clouds: Texture; sunD
   )
 }
 
-function Atmosphere() {
+/**
+ * 大气辉光：只做一层边缘 rim，不增加后处理。
+ * 呼吸在 useFrame 里用正弦把不透明度写进材质 uniform（§4.1、§5.3）：
+ * 每帧只有一次乘法/正弦，不触发 React 更新；减少动态固定 0.12，手机幅度减半。
+ */
+function Atmosphere({ reducedMotion, mobile }: { reducedMotion: boolean; mobile: boolean }) {
+  const materialRef = useRef<ShaderMaterial>(null)
   const material = useMemo(() => {
     return new ShaderMaterial({
       uniforms: {
         uColor: { value: new Color(ATMO) },
+        uOpacity: { value: ATMO_OPACITY_MIN },
       },
       vertexShader: `
         varying vec3 vViewNormal;
@@ -154,10 +179,11 @@ function Atmosphere() {
       `,
       fragmentShader: `
         uniform vec3 uColor;
+        uniform float uOpacity;
         varying vec3 vViewNormal;
         void main() {
           float rim = pow(1.0 - abs(vViewNormal.z), 2.5);
-          gl_FragColor = vec4(uColor, rim * smoothstep(0.0, 0.35, abs(vViewNormal.z)) * 0.48);
+          gl_FragColor = vec4(uColor, rim * smoothstep(0.0, 0.35, abs(vViewNormal.z)) * uOpacity);
         }
       `,
       transparent: true,
@@ -168,12 +194,24 @@ function Atmosphere() {
     })
   }, [])
 
+  const breathSeconds = useMemo(() => readBreathSeconds(), [])
+  const range = mobile ? ATMO_OPACITY_RANGE * 0.5 : ATMO_OPACITY_RANGE
+
   useEffect(() => () => material.dispose(), [material])
+
+  useFrame((state) => {
+    const uniform = materialRef.current?.uniforms.uOpacity
+    if (!uniform) return
+    uniform.value = reducedMotion
+      ? ATMO_OPACITY_MIN
+      : ATMO_OPACITY_MIN +
+        range * (0.5 + 0.5 * Math.sin((state.clock.elapsedTime * Math.PI * 2) / breathSeconds))
+  })
 
   return (
     <mesh scale={ATMOSPHERE_SCALE}>
       <sphereGeometry args={[1, 64, 48]} />
-      <primitive object={material} attach="material" />
+      <primitive ref={materialRef} object={material} attach="material" />
     </mesh>
   )
 }

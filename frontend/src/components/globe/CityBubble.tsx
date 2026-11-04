@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 import { isApiError } from '../../api/http'
 import { listCityWorks } from '../../api/globe'
 import { queryKeys } from '../../api/queryKeys'
+import { EASE, SEC } from '../../lib/motion'
 import { rememberCoverSource } from '../../lib/worksNavigation'
 import type { GlobeCity } from '../../types/city'
 import type { PublicWork } from '../../types/work'
@@ -124,13 +125,15 @@ export function CityBubble({
       const section = sectionRef.current
       if (!section) return
       if (reducedMotion) {
-        gsap.set(section, { opacity: 1, y: 0 })
+        gsap.set(section, { opacity: 1, scale: 1, y: 0 })
         return
       }
+      // §5 打开：opacity + scale + y，220ms out；transform-origin 由点位方向决定（SceneSync 写）。
+      gsap.killTweensOf(section)
       gsap.fromTo(
         section,
-        { opacity: 0, y: 8 },
-        { opacity: 1, y: 0, duration: 0.34, ease: 'power2.out' },
+        { opacity: 0, scale: 0.96, y: 6 },
+        { opacity: 1, scale: 1, y: 0, duration: SEC.base, ease: EASE.out },
       )
     },
     { scope: sectionRef, dependencies: [city.id, reducedMotion] },
@@ -140,16 +143,17 @@ export function CityBubble({
     () => {
       if (reducedMotion || works.length === 0) return
       const items = sectionRef.current?.querySelectorAll('[data-bubble-work]')
-      if (!items || items.length === 0) return
+      if (!items?.length) return
+      // §5 列表：行 opacity + y 4，stagger 40ms，首屏最多 4 行。
+      const rows = Array.from(items).slice(0, 4)
       gsap.fromTo(
-        items,
-        { opacity: 0, y: 6 },
+        rows,
+        { opacity: 0, y: 4 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.28,
-          ease: 'power2.out',
-          delay: 0.08,
+          duration: SEC.slow,
+          ease: EASE.out,
           stagger: 0.04,
           clearProps: 'opacity,transform',
         },

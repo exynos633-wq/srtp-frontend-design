@@ -1,4 +1,5 @@
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7,14 +8,61 @@
   padding: 0 var(--space-5);
   border: 1px solid transparent;
   border-radius: var(--radius-control);
+  overflow: hidden;
   font-size: var(--text-label);
   line-height: var(--leading-label);
   font-weight: var(--weight-label);
   cursor: pointer;
   transition:
+    transform var(--dur-press) var(--ease-out),
     background-color var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard),
     color var(--dur-fast) var(--ease-standard);
+}
+
+/*
+ * 主/次按钮的统一质感（动效设计 v2.1 §4.4）：
+ * - hover 时一道 600ms 的光扫过表面（只动 ::after 的 transform）；
+ * - 按压缩到 0.97，释放由 transition 回正；
+ * - 键盘焦点在全局焦点环外叠一层短暂光晕。
+ */
+.button::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 32%,
+    rgb(255 255 255 / 18%) 50%,
+    transparent 68%
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+  content: '';
+}
+
+.button:hover:not(:disabled)::after {
+  animation: button-shine calc(var(--dur-scene) + 0ms) var(--ease-out);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--color-focus-gap),
+    0 0 0 4px var(--color-focus),
+    0 0 18px rgb(84 200 193 / 30%);
+}
+
+@keyframes button-shine {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(120%);
+  }
 }
 
 .primary {
@@ -50,4 +98,20 @@
   background: var(--color-disabled-bg);
   color: var(--color-disabled-text);
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button::after {
+    display: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .button:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--color-focus-gap),
+      0 0 0 4px var(--color-focus);
+  }
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ModelFormat } from '../../types/work'
 import { classNames } from '../../lib/classNames'
 import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
+import { DUR } from '../../lib/motion'
 import { toViewerErrorInfo } from '../../viewer/errors'
 import { ModelViewer } from '../../viewer/ModelViewer'
 import { RemoteModelViewer } from '../../viewer/RemoteModelViewer'
@@ -40,6 +41,15 @@ import {
 import styles from './ModelViewport.module.css'
 
 const EMPTY_CONFIG: ModelViewConfig = {}
+
+/**
+ * §7 观看器菜单/面板的卸载时点，和 CSS 的 --dur-* 令牌同源：
+ * 菜单关闭 ≤100ms（≈98ms，取 --dur-press 的 70%）、面板退出 160ms（--dur-fast）。
+ * 进入/退出本身用 CSS transition 实现：可在关闭途中直接反向接管，且不把
+ * 行内 opacity 写进 DOM（jsdom 单测里 getComputedStyle 会把 opacity 0 判为不可见）。
+ */
+const MENU_CLOSE_MS = DUR.press * 0.7
+const PANEL_CLOSE_MS = DUR.fast
 
 const EMPTY_RECORDING: RecordingState = {
   recording: false,
@@ -141,9 +151,86 @@ export function ModelViewport({
   const moreRef = useRef<HTMLDivElement>(null)
   const moreButtonRef = useRef<HTMLButtonElement>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+  // 关闭过渡期间菜单仍在 DOM（data-closing），但 aria-expanded 立即变 false；焦点/键盘语义不受影响。
+  const [moreClosing, setMoreClosing] = useState(false)
+  const menuCloseTimerRef = useRef<number | null>(null)
+  const panelCloseTimerRef = useRef<number | null>(null)
+  // 面板退出期间保持挂载 160ms 并设为 inert + aria-hidden，随后卸载。
+  const [closingPanel, setClosingPanel] = useState<'settings' | 'info' | null>(null)
+
+  function clearMenuCloseTimer() {
+    if (menuCloseTimerRef.current === null) return
+    window.clearTimeout(menuCloseTimerRef.current)
+    menuCloseTimerRef.current = null
+  }
+
+  function clearPanelCloseTimer() {
+    if (panelCloseTimerRef.current === null) return
+    window.clearTimeout(panelCloseTimerRef.current)
+    panelCloseTimerRef.current = null
+  }
+
+  function openMore() {
+    clearMenuCloseTimer()
+    setMoreClosing(false)
+    closePanelsImmediately()
+    setMoreOpen(true)
+  }
+
+  /** 关闭更多菜单；immediate 用于 Escape / 菜单项 / Tab，保证测试与焦点语义立即生效。 */
+  function closeMore(immediate = false) {
+    if (!moreOpen) return
+    if (immediate || reducedMotion || moreClosing) {
+      clearMenuCloseTimer()
+      setMoreClosing(false)
+      setMoreOpen(false)
+      return
+    }
+    // 先让 CSS 从当前值播 100ms 以内的退出，再卸载；期间 aria-expanded 已为 false。
+    setMoreClosing(true)
+    menuCloseTimerRef.current = window.setTimeout(() => {
+      menuCloseTimerRef.current = null
+      setMoreClosing(false)
+      setMoreOpen(false)
+    }, MENU_CLOSE_MS)
+  }
+
+  function closePanelsImmediately() {
+    clearPanelCloseTimer()
+    setClosingPanel(null)
+    setSettingsOpen(false)
+    setInfoOpen(false)
+  }
+
+  function openPanel(panel: 'settings' | 'info') {
+    clearPanelCloseTimer()
+    setClosingPanel(null)
+    if (panel === 'settings') {
+      setInfoOpen(false)
+      setSettingsOpen(true)
+    } else {
+      setSettingsOpen(false)
+      setInfoOpen(true)
+    }
+  }
+
+  /** 关闭面板：正常路径播 160ms 退出；互斥切换时由 openPanel 直接卸载，不叠两套时间轴。 */
+  function closePanel(panel: 'settings' | 'info') {
+    const open = panel === 'settings' ? settingsOpen : infoOpen
+    if (!open) return
+    if (panel === 'settings') setSettingsOpen(false)
+    else setInfoOpen(false)
+    if (reducedMotion) return
+    clearPanelCloseTimer()
+    setClosingPanel(panel)
+    panelCloseTimerRef.current = window.setTimeout(() => {
+      panelCloseTimerRef.current = null
+      setClosingPanel(null)
+    }, PANEL_CLOSE_MS)
+  }
 
   function runMenuAction(action: () => void) {
-    setMoreOpen(false)
+    closeMore(true)
     moreButtonRef.current?.focus()
     action()
   }
@@ -183,7 +270,14 @@ export function ModelViewport({
     if (moreOpen) moreRef.current?.querySelector<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)')?.focus()
     else rootRef.current?.querySelector<HTMLButtonElement>(settingsOpen ? 'button[aria-label="关闭显示设置"]' : 'button[aria-label="关闭模型信息"]')?.focus()
     const outside = (event: PointerEvent) => {
-      if (moreOpen && !moreRef.current?.contains(event.target as Node)) setMoreOpen(false)
+      if (!moreOpen || moreRef.current?.contains(event.target as Node)) return
+      // 点击外部立即收起（不超过 100ms），不排队播完退出动画。
+      if (menuCloseTimerRef.current !== null) {
+        window.clearTimeout(menuCloseTimerRef.current)
+        menuCloseTimerRef.current = null
+      }
+      setMoreClosing(false)
+      setMoreOpen(false)
     }
     document.addEventListener('pointerdown', outside)
     return () => {
@@ -207,6 +301,15 @@ export function ModelViewport({
     info?.format === 'glb' ||
     info?.format === 'mesh-ply' ||
     (!info && (modelFormat === 'glb' || modelFormat === 'mesh-ply'))
+
+  // 卸载时清掉退出计时器，避免对已卸载组件 setState。
+  useEffect(
+    () => () => {
+      if (menuCloseTimerRef.current !== null) window.clearTimeout(menuCloseTimerRef.current)
+      if (panelCloseTimerRef.current !== null) window.clearTimeout(panelCloseTimerRef.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     remoteFailureRef.current = onRemoteFailure
@@ -553,7 +656,10 @@ export function ModelViewport({
       onKeyDownCapture={(event) => {
         if (event.key === 'Escape' && (moreOpen || settingsOpen || infoOpen)) {
           event.preventDefault(); event.stopPropagation()
-          setMoreOpen(false); setSettingsOpen(false); setInfoOpen(false)
+          // Escape 是高频操作：菜单与焦点立即生效，面板可走 160ms 退出（期间 inert + aria-hidden）。
+          closeMore(true)
+          closePanel('settings')
+          closePanel('info')
           moreButtonRef.current?.focus()
         }
       }}
@@ -606,7 +712,7 @@ export function ModelViewport({
                   >
                     <span
                       className={styles.progressBar}
-                      style={{ width: `${progressPercent ?? 8}%` }}
+                      style={{ transform: `scaleX(${(progressPercent ?? 8) / 100})` }}
                     />
                   </div>
                   <p className={styles.statusHint}>仅显示实际已读取字节，不使用计时假进度。</p>
@@ -641,11 +747,18 @@ export function ModelViewport({
           </div>
         ) : null}
 
-        {infoOpen ? (
-          <aside className={styles.infoPanel} aria-label="模型信息">
+        {infoOpen || closingPanel === 'info' ? (
+          <aside
+            className={styles.infoPanel}
+            aria-label="模型信息"
+            data-viewer-panel="info"
+            data-closing={infoOpen ? undefined : 'true'}
+            aria-hidden={infoOpen ? undefined : true}
+            inert={infoOpen ? undefined : true}
+          >
             <div className={styles.panelHead}>
               <h3 className={styles.panelTitle}>模型信息</h3>
-              <button type="button" className={styles.closeButton} aria-label="关闭模型信息" onClick={() => { setInfoOpen(false); moreButtonRef.current?.focus() }}>
+              <button type="button" className={styles.closeButton} aria-label="关闭模型信息" onClick={() => { closePanel('info'); moreButtonRef.current?.focus() }}>
                 <CloseIcon />
               </button>
             </div>
@@ -792,15 +905,16 @@ export function ModelViewport({
 
             <div className={styles.moreWrap} ref={moreRef} data-viewer-shortcut-ignore="true">
               <button ref={moreButtonRef} type="button" className={styles.moreButton}
-                aria-haspopup="menu" aria-expanded={moreOpen} aria-controls={menuId} data-action="more"
-                onClick={() => { setSettingsOpen(false); setInfoOpen(false); setMoreOpen(!moreOpen) }}>… 更多</button>
+                aria-haspopup="menu" aria-expanded={moreOpen && !moreClosing} aria-controls={menuId} data-action="more"
+                onClick={() => { if (moreOpen && !moreClosing) closeMore(); else openMore() }}>… 更多</button>
               {moreOpen ? <div id={menuId} className={styles.moreMenu} role="menu" aria-label="更多功能"
+                data-more-menu data-closing={moreClosing ? 'true' : undefined}
                 onKeyDown={(event) => {
                   const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
                   const index = items.indexOf(document.activeElement as HTMLButtonElement)
                   const key = event.key
                   if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Tab'].includes(key)) return
-                  if (key === 'Tab') { setMoreOpen(false); moreButtonRef.current?.focus(); return }
+                  if (key === 'Tab') { closeMore(true); moreButtonRef.current?.focus(); return }
                   event.preventDefault()
                   items[key === 'Home' ? 0 : key === 'End' ? items.length - 1 : (index + (key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus()
                 }}>
@@ -808,8 +922,8 @@ export function ModelViewport({
                 <button role="menuitem" disabled={!ready || recordingBusy} onClick={() => runMenuAction(() => void toggleRecording())}>{recording.recording ? <StopIcon /> : <RecordIcon />}{recordingBusy ? '正在停止录制' : recording.recording ? '停止录制' : '录制 35 秒'}</button>
                 {recordingResult && !recording.recording ? <button role="menuitem" onClick={() => runMenuAction(() => downloadRecording(recordingResult))}><ImageIcon />下载视频</button> : null}
                 <hr />
-                <button role="menuitem" disabled={Boolean(remote) && !ready} onClick={() => { setMoreOpen(false); setSettingsOpen(true) }}><SettingsIcon />显示设置</button>
-                <button role="menuitem" onClick={() => { setMoreOpen(false); setInfoOpen(true) }}><InfoIcon /><span>模型信息{modelingNote?.trim() ? <small>含建模说明</small> : null}</span></button>
+                <button role="menuitem" disabled={Boolean(remote) && !ready} onClick={() => { closeMore(true); openPanel('settings') }}><SettingsIcon />显示设置</button>
+                <button role="menuitem" onClick={() => { closeMore(true); openPanel('info') }}><InfoIcon /><span>模型信息{modelingNote?.trim() ? <small>含建模说明</small> : null}</span></button>
                 {showEnd ? <><hr /><button role="menuitem" disabled={!onEnd} onClick={() => runMenuAction(() => void endPreview())}><CloseIcon />{endLabel}</button></> : null}
               </div> : null}
             </div>
@@ -820,8 +934,16 @@ export function ModelViewport({
         </div>
 
 
-      {settingsOpen ? (
-        <aside className={styles.settings} aria-label="显示设置" data-viewer-shortcut-ignore="true">
+      {settingsOpen || closingPanel === 'settings' ? (
+        <aside
+          className={styles.settings}
+          aria-label="显示设置"
+          data-viewer-shortcut-ignore="true"
+          data-viewer-panel="settings"
+          data-closing={settingsOpen ? undefined : 'true'}
+          aria-hidden={settingsOpen ? undefined : true}
+          inert={settingsOpen ? undefined : true}
+        >
           <div className={styles.panelHead}>
             <h3 className={styles.panelTitle}>显示设置</h3>
             <button
@@ -830,7 +952,7 @@ export function ModelViewport({
               aria-label="关闭显示设置"
               onClick={() => {
                 viewerRef.current?.endParameterInteraction()
-                setSettingsOpen(false)
+                closePanel('settings')
                 moreButtonRef.current?.focus()
               }}
             >

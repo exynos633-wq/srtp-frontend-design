@@ -1,0 +1,126 @@
+/*
+ * 首页环境光（动效设计 v2.1 §4.1）。全部为静态渐变或极慢 CSS 循环，
+ * 只动 transform / opacity；减少动态下停在最终光位。
+ */
+.lights {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* 构图光：地球后方的大椭圆冷光，让深色底有“来源”。 */
+.glow {
+  position: absolute;
+  top: 52%;
+  left: 66%;
+  width: min(1100px, 82vw);
+  aspect-ratio: 1;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    var(--light-glow) 0%,
+    var(--light-accent) 35%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+}
+
+/* 两侧洗墙光带：45° 斜向、缓慢横向摆动。 */
+.wash {
+  position: absolute;
+  top: -18%;
+  width: 560px;
+  height: 1380px;
+  opacity: 0.72;
+  background: radial-gradient(
+    68.54% 68.72% at 55.02% 31.46%,
+    var(--light-wash) 0%,
+    hsl(177 46% 55% / 3%) 50%,
+    transparent 80%
+  );
+  filter: blur(6px);
+}
+
+.washLeft {
+  left: -14%;
+  animation: washLeft var(--ambient-slow) ease-in-out infinite alternate;
+}
+
+.washRight {
+  right: -14%;
+  animation: washRight calc(var(--ambient-slow) + 2s) ease-in-out infinite alternate;
+}
+
+/* 顶部光锥：一束从画面上方落下的柔光，落在地球与标题之间的负空间。 */
+.cone {
+  position: absolute;
+  top: -260px;
+  left: 62%;
+  width: 560px;
+  height: 640px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgb(198 226 230 / 22%) 0%,
+    rgb(198 226 230 / 7%) 45%,
+    transparent 70%
+  );
+  transform: translateX(-50%) rotate(16deg);
+  filter: blur(34px);
+}
+
+@keyframes washLeft {
+  from {
+    transform: rotate(45deg) translate3d(-40px, 0, 0);
+  }
+
+  to {
+    transform: rotate(45deg) translate3d(40px, 0, 0);
+  }
+}
+
+@keyframes washRight {
+  from {
+    transform: rotate(-45deg) translate3d(40px, 0, 0);
+  }
+
+  to {
+    transform: rotate(-45deg) translate3d(-40px, 0, 0);
+  }
+}
+
+@media (max-width: 767px) {
+  .glow {
+    left: 50%;
+    top: 38%;
+    width: min(620px, 150vw);
+  }
+
+  .wash {
+    width: 360px;
+    height: 900px;
+    opacity: 0.35;
+    filter: none;
+  }
+
+  .cone {
+    top: -180px;
+    left: 50%;
+    width: 380px;
+    height: 440px;
+    opacity: 0.55;
+    filter: blur(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wash {
+    animation: none;
+    transform: rotate(45deg);
+  }
+
+  .washRight {
+    transform: rotate(-45deg);
+  }
+}

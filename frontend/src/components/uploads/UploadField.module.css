@@ -174,7 +174,10 @@
   height: 100%;
   border-radius: inherit;
   background: var(--color-accent);
-  transition: width var(--dur-base) var(--ease-standard);
+  /*
+   * 上传进度按真实事件直接设值，不做补间（§9：不得动画 layout 属性）。
+   * 若要平滑，需要把 UploadField 的宽内联样式改成 scaleX——超出本次动效任务的文件范围。
+   */
 }
 
 .localPreview {

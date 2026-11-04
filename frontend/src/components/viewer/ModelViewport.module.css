@@ -69,6 +69,7 @@
 }
 
 .iconButton {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -81,9 +82,28 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   transition:
+    transform var(--dur-press) var(--ease-out),
     background-color var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard),
     color var(--dur-fast) var(--ease-standard);
+}
+
+/* 工具切换下划线用 scaleX（§7）：180ms 取 --dur-fast，颜色 120ms 取 --dur-fast。 */
+.iconButton::after {
+  position: absolute;
+  right: 10px;
+  bottom: -1px;
+  left: 10px;
+  height: 1px;
+  background: var(--color-accent);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.iconButton:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .iconButton:hover:not(:disabled) {
@@ -101,6 +121,34 @@
   border-color: var(--color-accent);
   background: var(--color-selected);
   color: var(--color-accent);
+}
+
+.iconButtonActive::after {
+  transform: scaleX(1);
+  /* §4.3 工具栏选中光带：在 1px accent 下划线上叠一条缓慢经过的亮段（4.8s = 4 × --dur-cinema），
+   * 两端 accent 渐隐、中间银亮，只动 background-position，不改按钮尺寸与布局。 */
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent-hover) 35%,
+    var(--color-silver) 50%,
+    var(--color-accent-hover) 65%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 50% 100%;
+  background-position: -100% 0;
+  animation: toolbar-light calc(var(--dur-cinema) * 4) linear infinite;
+}
+
+@keyframes toolbar-light {
+  from {
+    background-position: -100% 0;
+  }
+
+  to {
+    background-position: 200% 0;
+  }
 }
 
 .iconButtonDanger {
@@ -226,10 +274,13 @@
 
 .progressBar {
   display: block;
+  width: 100%;
   height: 100%;
   border-radius: inherit;
   background: var(--color-accent);
-  transition: width 120ms linear;
+  /* 进度只动 transform（§9）：宽度由 React 直接写成 scaleX，避免 layout 属性补间。 */
+  transform-origin: left center;
+  transition: transform var(--dur-fast) linear;
 }
 
 @keyframes viewer-spin {
@@ -508,6 +559,7 @@
   }
 }
 
+/* 减少动态：保留颜色/透明度反馈，去掉下划线绘制、按压与进度补间（§9）。 */
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: none;
@@ -516,6 +568,23 @@
 
   .progressBar {
     transition: none;
+  }
+
+  .iconButton,
+  .moreButton {
+    transition:
+      background-color var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .iconButton::after {
+    transition: none;
+  }
+
+  .iconButton:active:not(:disabled),
+  .moreButton:active:not(:disabled) {
+    transform: none;
   }
 }
 
@@ -605,6 +674,10 @@
   color: var(--color-text);
   font: inherit;
   cursor: pointer;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
 }
 .moreMenu {
   position: absolute;
@@ -682,9 +755,11 @@
 
 /* Gallery-like controls keep the image dominant. */
 .toolbar { background: var(--color-bg); padding: 8px 0; }
-.iconButtonActive { border-color: transparent; border-bottom-color: var(--color-accent); border-radius: 0; background: transparent; }
+.iconButtonActive { border-color: transparent; border-radius: 0; background: transparent; }
 .moreButton { background: transparent; border-radius: 3px; }
-.moreMenu { border-radius: 4px; background: #10191f; }
+/* 菜单从右上角长出来（§7），关闭从当前状态接管。 */
+.moreMenu { border-radius: 4px; background: #10191f; transform-origin: top right; }
+.moreButton:active:not(:disabled) { transform: scale(0.97); }
 
 @container (max-width: 560px) {
   .segment {
@@ -711,5 +786,119 @@
     padding: 0;
     font-size: 12px;
     white-space: nowrap;
+  }
+}
+
+/* —— 动效 v2.0 §7：观看器外壳、工具栏、更多菜单与面板的进出 ——
+ * 进入用 CSS transition + @starting-style（挂载首帧从隐藏状态过渡）；
+ * 退出用 [data-closing] 过渡到隐藏，由 TSX 在 100/160ms 后卸载。
+ * 这样关闭途中再次打开会从当前值反向接管，且不在 DOM 写行内 opacity，
+ * 不影响单测里对可见性的判断。
+ */
+.root {
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+.toolbar {
+  opacity: 1;
+  /* §7 工具栏在 200ms 后淡入；照 --dur-base 收尾。 */
+  transition: opacity var(--dur-base) var(--ease-out) 200ms;
+}
+
+.moreMenu {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  /* §4.3：进入用 spring 曲线（tokens 的 --ease-spring），收尾更有实体感。 */
+  transition:
+    opacity var(--dur-press) var(--ease-spring),
+    transform var(--dur-press) var(--ease-spring);
+}
+
+.moreMenu[data-closing='true'] {
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  /* §7 关闭不超过 100ms：≈98ms，退出仍走 --ease-out，不做回弹。 */
+  transition-duration: calc(var(--dur-press) * 0.7);
+  transition-timing-function: var(--ease-out);
+}
+
+.settings,
+.infoPanel {
+  /* 进入同样换 spring；[data-closing] 规则会覆盖为 160ms --ease-out。 */
+  transition:
+    opacity var(--dur-base) var(--ease-spring),
+    transform var(--dur-base) var(--ease-spring);
+}
+
+.settings[data-closing='true'],
+.infoPanel[data-closing='true'] {
+  opacity: 0;
+  transform: translateY(8px);
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+@starting-style {
+  .root {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  .toolbar {
+    opacity: 0;
+  }
+
+  .moreMenu {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  .settings,
+  .infoPanel {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* —— 动效 v2.1 §4.3：浮层用半透明深底 + 小面积背景模糊（§5.3 blur ≤ 6px，不扩大玻璃面积） ——
+ * 只给更多菜单与设置/信息面板；减少动态下仍是静态模糊，不做过渡。
+ */
+.moreMenu,
+.settings,
+.infoPanel {
+  background: rgb(16 25 31 / 82%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* 移动端/紧凑容器把模糊降到 4px，控制填充成本。 */
+@container (max-width: 560px) {
+  .moreMenu,
+  .settings,
+  .infoPanel {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* 减少动态：保留透明度/颜色反馈，去掉外壳、菜单、面板的位移（§9）。 */
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .toolbar,
+  .moreMenu,
+  .settings,
+  .infoPanel,
+  .moreMenu[data-closing='true'],
+  .settings[data-closing='true'],
+  .infoPanel[data-closing='true'] {
+    transition-property: opacity;
+  }
+
+  /* 选中光带停走，只保留静态 accent 下划线（§4.5）。 */
+  .iconButtonActive::after {
+    animation: none;
+    background-image: none;
   }
 }

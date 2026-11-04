@@ -33,44 +33,18 @@
   line-height: var(--leading-meta);
 }
 
+/*
+ * 场景加载态定位容器（§4.4）：视觉（网格/扫描线/边框/标签）全部来自 ScanLoader，
+ * 这里只负责在场景内居中，不拦截地球拖拽。
+ */
 .pending {
   position: absolute;
   top: 50%;
   left: 50%;
   z-index: 4;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  background: rgb(8 13 18 / 74%);
-  color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
+  width: min(340px, calc(100% - 32px));
   transform: translate(-50%, -50%);
   pointer-events: none;
-  backdrop-filter: blur(10px);
-}
-
-.pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-
-  50% {
-    opacity: 1;
-  }
 }
 
 .loading {
@@ -254,9 +228,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse {
+  /* 减少动态：标题光扫/CTA 旋转全部不播；光环停为静态弧光。 */
+  .sweep {
+    display: none;
+  }
+
+  .heroLink::after {
     animation: none;
-    opacity: 1;
   }
 }
 
@@ -268,20 +246,21 @@
   width: 35%;
   transform: none;
 }
+/* 标题上细线（§4 80ms scaleX 0→1，origin left）。 */
+.rule {
+  display: block;
+  width: 48px;
+  height: 2px;
+  margin-bottom: 20px;
+  background: var(--color-accent);
+  transform-origin: left center;
+}
 .eyebrow {
   margin: 0 0 24px;
   color: var(--color-text-secondary);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: .32em;
-}
-.eyebrow::before {
-  content: '';
-  display: block;
-  width: 48px;
-  height: 2px;
-  margin-bottom: 20px;
-  background: var(--color-accent);
 }
 .heroTitle {
   margin: 0;
@@ -292,8 +271,33 @@
   letter-spacing: -.035em;
   color: #f0ede6;
 }
-.heroTitle span {
+/* 逐行揭示：外层裁切，内层 GSAP yPercent 110→0。 */
+.line {
+  position: relative;
   display: block;
+  overflow: hidden;
+}
+.lineInner {
+  display: block;
+}
+/* §4.1 标题一次光扫：.line 裁切内的冷白光带，由 GSAP 驱动，默认不可见、不拦指针。 */
+.sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 120px;
+  background: linear-gradient(
+    90deg,
+    rgb(198 226 230 / 0%) 0%,
+    rgb(198 226 230 / 38%) 45%,
+    rgb(198 226 230 / 55%) 50%,
+    rgb(198 226 230 / 38%) 55%,
+    rgb(198 226 230 / 0%) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
 }
 .subtitle {
   max-width: 28ch;
@@ -302,7 +306,14 @@
   line-height: 1.65;
   color: var(--color-text-secondary);
 }
+/* §4.1 副标题按短语拆分：blur/opacity 只作用在短语上，整句文本仍连续可读。 */
+.phrase {
+  display: inline-block;
+}
 .heroLink {
+  --cta-orbit: calc(var(--dur-cinema) * 5);
+  --cta-angle: 0deg;
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 24px;
@@ -316,6 +327,62 @@
 }
 .heroLink:hover {
   background: var(--color-selected);
+}
+/*
+ * §4.1 主 CTA 绕边光点：padding 1px + mask-composite: exclude 只留 1px 环，
+ * 青绿弧光随 --cta-angle 绕边旋转（6s/圈，hover 3s）。默认静态，动画是渐进增强。
+ */
+@property --cta-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.heroLink::after {
+  content: '';
+  position: absolute;
+  /* 覆盖在 1px 边框上，而不是边框内侧：inset:-1px 让光弧与边框重合。 */
+  inset: -1px;
+  z-index: 1;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--cta-angle),
+    transparent 0deg 280deg,
+    rgb(198 226 230 / 90%) 320deg,
+    transparent 352deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.85;
+  pointer-events: none;
+}
+@keyframes ctaOrbit {
+  to {
+    --cta-angle: 360deg;
+  }
+}
+/* 不支持 conic-gradient 的浏览器不画环，保留既有 1px accent 边框。 */
+@supports not (background: conic-gradient(from 0deg, red, blue)) {
+  .heroLink::after {
+    display: none;
+  }
+}
+/*
+ * 旋转只在“非减少动态 + 可 hover”下启用；不支持 @property 的浏览器会忽略关键帧，
+ * 光环停在静态弧光（1px 边框不变），即降级形态。
+ */
+@supports (--x: 0) {
+  @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+    .heroLink::after {
+      animation: ctaOrbit var(--cta-orbit) linear infinite;
+    }
+
+    .heroLink:hover {
+      --cta-orbit: calc(var(--dur-cinema) * 2.5);
+    }
+  }
 }
 @media (max-width: 767px) {
   .page {
@@ -363,10 +430,31 @@
   .hero { left: 32px; }
   .heroTitle { font-size: clamp(56px, 7.2vw, 72px); }
 }
+@media (min-width: 768px) {
+  /*
+   * 三维不可用时说明落在原地球区域（右侧 64%），避免被左侧文案层盖住、
+   * 导致目录入口无法点击；手机场景在文档流下方，保持原样。
+   */
+  .fallback {
+    left: 36%;
+    background:
+      radial-gradient(circle at 66% 50%, rgb(13 29 39 / 88%) 0 22%, rgb(8 13 18 / 0%) 58%),
+      var(--color-bg);
+  }
+}
 @media (max-width: 767px) {
   .hero { padding: 36px 24px 0; }
   .heroTitle { font-size: clamp(44px, 12vw, 62px); }
   .eyebrow { margin-bottom: 22px; }
   .heroLink { min-height: 48px; font-size: 14px; }
   .page::after { bottom: 80px; left: 24px; right: 24px; }
+
+  /*
+   * 手机小字号下收敛标题光扫：光带更窄（JS 同时把行程/峰值减半），
+   * 避免 120px 光带在 44px 标题上盖住正文；reduced 下仍由上方媒体查询整层停播。
+   */
+  .sweep { width: 72px; }
+
+  /* 场景加载态在 320/390 留出左右呼吸，不贴边。 */
+  .pending { width: min(300px, calc(100% - 32px)); }
 }

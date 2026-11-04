@@ -1,0 +1,21 @@
+.light {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  background: radial-gradient(circle, rgb(198 226 230 / 6%) 0%, transparent 62%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+  pointer-events: none;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .light {
+    display: none;
+  }
+}

@@ -66,6 +66,19 @@
   opacity: .35;
 }
 
+/* §4.1 轨道刻度：60s 只转 1°（2 × --ambient-slower），只挂在桌面；减少动态不播。 */
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .orbitTicks {
+    transform-box: view-box;
+    transform-origin: 500px 500px;
+    animation: orbitTicksTurn calc(var(--ambient-slower) * 2) linear infinite;
+  }
+}
+
+@keyframes orbitTicksTurn {
+  to { transform: rotate(1deg); }
+}
+
 .orbitMarkers {
   stroke: var(--color-accent);
   opacity: .6;
@@ -150,6 +163,17 @@
   opacity: 0.58;
 }
 
+/* §4.1 连线光点：pathLength=1 归一化的 4% 短划，从点位跑到气泡（GSAP 写 dashoffset/opacity）。 */
+.connectorBeam {
+  visibility: hidden;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: .04 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .bubbleLayer {
   position: absolute;
   top: 0;
@@ -177,7 +201,7 @@
   visibility: visible;
   pointer-events: none;
   cursor: pointer;
-  transition: opacity 140ms var(--ease-out);
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .point[data-front='false'] {
@@ -198,6 +222,7 @@
 }
 
 .dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -206,8 +231,52 @@
     0 0 0 4px rgb(84 200 193 / 14%),
     0 0 14px rgb(84 200 193 / 42%);
   transition:
-    transform 180ms var(--ease-out),
-    box-shadow 180ms var(--ease-out);
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* §4.1 点位雷达：选中/展开 2 圈错峰扩散，hover 一圈弱化。只动 transform/opacity。 */
+.dot::before,
+.dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes pointRipple {
+  0% {
+    opacity: var(--ripple-alpha, .18);
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+.point[data-open='true'] .dot::before,
+.point[data-open='true'] .dot::after,
+.point[aria-pressed='true'] .dot::before,
+.point[aria-pressed='true'] .dot::after {
+  animation: pointRipple var(--dur-ripple) var(--ease-out) infinite;
+}
+
+.point[data-open='true'] .dot::after,
+.point[aria-pressed='true'] .dot::after {
+  animation-delay: calc(var(--dur-ripple) * -0.5);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .point:hover:not([data-open='true']) .dot::before {
+    --ripple-alpha: .1;
+
+    animation: pointRipple var(--dur-ripple) var(--ease-out) infinite;
+  }
 }
 
 .point[aria-pressed='true'] .dot,
@@ -324,6 +393,12 @@
 @media (prefers-reduced-motion: reduce) {
   .dot {
     transition: none;
+  }
+
+  .dot::before,
+  .dot::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
