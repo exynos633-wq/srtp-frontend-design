@@ -18,6 +18,21 @@
   font-weight: var(--weight-title);
 }
 
+/*
+ * 标题逐行揭示的裁切容器：外层 overflow hidden，内层由目录页动画 yPercent。
+ * 上下留 0.08em 并在外边距收回，避免中文/西文描边在裁切边缘被切掉。
+ */
+.titleLine {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.titleInner {
+  display: block;
+}
+
 .description {
   max-width: 60ch;
   color: var(--color-text-secondary);

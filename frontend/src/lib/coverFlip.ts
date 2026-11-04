@@ -1,8 +1,21 @@
 import gsap from 'gsap'
 import { Flip } from 'gsap/Flip'
+import { DUR, EASE, SEC } from './motion'
 import type { CoverSource } from './worksNavigation'
 
 gsap.registerPlugin(Flip)
+
+/**
+ * §7 封面连续转场的节奏，全部由 motion.ts 的令牌组合：
+ * - 620ms 拟合 → SEC.scene（--dur-scene 600ms，20ms 为实机校准余量）；
+ * - 180ms 遮罩 → SEC.fast（--dur-fast 160ms）；
+ * - 直接进入 380ms → SEC.enter。
+ */
+const TIMING = {
+  fit: SEC.scene,
+  maskOut: SEC.fast,
+  direct: SEC.enter,
+} as const
 
 /**
  * 封面连续转场的最小实现：一个视觉克隆 + 一层遮罩，结束后全部移除。
@@ -118,9 +131,10 @@ export function runCoverTransition({
   }
 
   timeline = gsap.timeline({ onComplete: finish })
-  timeline.to(mask, { opacity: 1, duration: 0.18, ease: 'power1.out' }, 0)
-  const fit = Flip.fit(layer, target, { duration: 0.66, ease: 'power3.inOut', scale: true })
+  timeline.to(mask, { opacity: 1, duration: TIMING.maskOut, ease: EASE.out }, 0)
+  const fit = Flip.fit(layer, target, { duration: TIMING.fit, ease: EASE.inOut, scale: true })
   if (fit) timeline.add(fit as gsap.core.Tween, 0.02)
+  // 0.42s：封面仍差约 200ms 到位，信息列从这里开始（§7「封面到位前 200ms」）。
   timeline.call(notifyEntered, undefined, 0.42)
 
   window.addEventListener('resize', handleResize, { once: true })
@@ -139,9 +153,10 @@ export function runDirectCoverEntrance(
   const tween = gsap.fromTo(
     cover,
     { opacity: 0, y: 12 },
-    { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+    { opacity: 1, y: 0, duration: TIMING.direct, ease: EASE.out },
   )
-  const enteredAt = window.setTimeout(onEntered, 180)
+  // 380ms 入场在约一半处点亮信息列，等价于「封面到位前约 200ms」。
+  const enteredAt = window.setTimeout(onEntered, DUR.enter / 2)
   return () => {
     window.clearTimeout(enteredAt)
     tween.kill()

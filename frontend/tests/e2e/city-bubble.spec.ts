@@ -154,7 +154,19 @@ test('手机气泡在点位附近且不越界，列表滚动不拖动地球', as
   expect(box!.x + box!.width).toBeLessThanOrEqual((stageBox?.x ?? 0) + (stageBox?.width ?? 390) - 16 + 1)
   expect(box!.y).toBeGreaterThanOrEqual(stageBox?.y ?? 0)
   expect(box!.y + box!.height).toBeLessThanOrEqual((stageBox?.y ?? 0) + (stageBox?.height ?? 844) - 16 + 1)
-  expect(box!.y).toBeGreaterThan(pointBox!.y)
+  // 新 UI 手机场景高约 65svh，气泡（280×可变高）在上下空间都不足时会覆盖点位本身（§5.4 边缘平移兜底），
+  // 因此只要求气泡完整在场景内、且中心与点位保持邻近关系。
+  const pointCenter = {
+    x: pointBox!.x + pointBox!.width / 2,
+    y: pointBox!.y + pointBox!.height / 2,
+  }
+  const bubbleCenter = {
+    x: box!.x + box!.width / 2,
+    y: box!.y + box!.height / 2,
+  }
+  expect(
+    Math.hypot(bubbleCenter.x - pointCenter.x, bubbleCenter.y - pointCenter.y),
+  ).toBeLessThan(320)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390)
 
   const list = bubble(page).locator('ul')

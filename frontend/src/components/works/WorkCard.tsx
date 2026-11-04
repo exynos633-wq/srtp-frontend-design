@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router'
+import { usePointerGlow } from '../../lib/lightField'
 import type { ModelFormat } from '../../types/work'
 import styles from './WorkCard.module.css'
 
@@ -39,6 +40,9 @@ export function WorkCard({
   onOpen,
 }: WorkCardProps) {
   const mediaRef = useRef<HTMLSpanElement>(null)
+  // 指针位置写进整卡链接的 --mx/--my，供 ::before 1px 光边框与 ::after 首排光斑读取；
+  // 钩子自带 hover / 减少动态门控（动效设计 v2.1 §5.3）。
+  const cardRef = usePointerGlow<HTMLAnchorElement>()
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
 
@@ -67,6 +71,7 @@ export function WorkCard({
     <li className={styles.item} data-work-card data-work-id={workId} data-featured={index === 1 ? 'true' : undefined}>
       <Link
         id={`work-card-link-${workId}`}
+        ref={cardRef}
         className={styles.card}
         to={href}
         onClick={handleClick}

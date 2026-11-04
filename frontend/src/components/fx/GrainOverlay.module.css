@@ -1,0 +1,17 @@
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background-image: var(--grain-url);
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
+  opacity: var(--grain-opacity);
+  pointer-events: none;
+}
+
+/* 减少动态与低性能场景：颗粒是静态材质，保留但不再叠加任何动画。 */
+@media (prefers-reduced-motion: reduce) {
+  .grain {
+    opacity: calc(var(--grain-opacity) * 0.85);
+  }
+}

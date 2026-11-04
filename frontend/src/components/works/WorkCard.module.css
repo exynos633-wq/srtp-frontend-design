@@ -8,13 +8,77 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  border-bottom: 1px solid var(--color-line);
+  /* 光域：1px 边光取 --glow-border，顶边叠 1px 内高光（§2.2 规律 02 / §4.2）。 */
+  border-bottom: 1px solid var(--glow-border);
   background: transparent;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  /* 指针光效写在这层；默认居中，指针门控关闭时也不至于空白。 */
+  --mx: 50%;
+  --my: 50%;
+  /* 让 ::after 光斑确定落在封面与文字之下：光只在负空间（§3.2）。 */
+  isolation: isolate;
+  /* 只过渡 transform / 颜色；边框 180ms、释放回正 180ms 都取最近的 --dur-fast（§6）。 */
   transition:
-    transform var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard);
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+/*
+ * 指针 1px 光边框（glowing-effect 的 CSS 等价实现，§4.2）：
+ * padding 1px + content-box / border-box 双层 mask 取差，只留 1px 环；
+ * 背景是跟随 --mx/--my 的 180px 径向光，hover 时淡入。
+ */
+.card::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    220px circle at var(--mx) var(--my),
+    rgb(84 200 193 / 60%),
+    transparent 70%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  content: '';
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+/* 首排大卡额外 320px 指针光斑（card-spotlight，§4.2 / §2.1-5）；其余卡片不加。 */
+.item[data-featured='true'] .card::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    var(--spotlight-size) circle at var(--mx) var(--my),
+    rgb(84 200 193 / 14%),
+    transparent 75%
+  );
+  /* 再叠一层同半径的 soft mask，让光斑边缘收得更干净（§4.2 accent 10%）。 */
+  -webkit-mask-image: radial-gradient(
+    var(--spotlight-size) circle at var(--mx) var(--my),
+    #000,
+    transparent 75%
+  );
+  mask-image: radial-gradient(
+    var(--spotlight-size) circle at var(--mx) var(--my),
+    #000,
+    transparent 75%
+  );
+  opacity: 0;
+  content: '';
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 /* 常规封面 16:10；桌面首件使用宽幅比例，加载前预留同样空间。 */
@@ -26,6 +90,8 @@
   flex: 1 0 auto;
   border: 1px solid var(--color-line);
   border-radius: 4px;
+  /* 卡片的顶边就是封面的顶边：内高光放在可见的这一层（§2.2 规律 02）。 */
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
   background: radial-gradient(ellipse at 50% 65%, var(--color-surface), var(--color-bg));
   overflow: hidden;
 }
@@ -141,15 +207,19 @@
   .item:nth-child(2) .body { min-height: 228px; }
 }
 
-/* 指针悬停才抬起；触屏不保留悬停态，改用按压反馈（动效设计 §2）。 */
+/* 悬停只动边框、封面与箭头，标题不位移（§6）；触屏不保留悬停态（§9）。 */
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
-    border-color: var(--color-border-hover);
-    transform: translateY(-3px);
+    border-color: var(--glow-border-hover);
+  }
+
+  .card:hover::before,
+  .item[data-featured='true'] .card:hover::after {
+    opacity: 1;
   }
 
   .card:hover .image {
-    transform: scale(1.025);
+    transform: scale(1.02);
   }
   .card:hover .arrow {
     background: var(--color-accent);
@@ -159,8 +229,11 @@
 }
 
 .card:active {
-  border-color: var(--color-border-hover);
-  transform: scale(0.995);
+  border-color: var(--glow-border-hover);
+  transform: scale(0.985);
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    border-color var(--dur-press) var(--ease-standard);
 }
 
 /* 冷银短角标只标当前选中，不沿建筑轮廓描线（规范 §2.1、§5.1）。 */
@@ -188,16 +261,35 @@
     linear-gradient(var(--color-silver), var(--color-silver)) right bottom / 1px 8px no-repeat;
 }
 
+/* 减少动态：去掉位移与封面缩放，保留边框/箭头 160ms 的颜色反馈（§9）。 */
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .image,
-  .arrow {
+  .card {
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .image {
     transition: none;
+  }
+
+  .arrow {
+    transition:
+      color var(--dur-fast) var(--ease-standard),
+      background-color var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard);
   }
 
   .card:hover,
   .card:active,
   .card:hover .image {
     transform: none;
+  }
+
+  /* 减少动态：光边框/光斑不显示，也不参与过渡；只留边框色反馈（§4.5）。 */
+  .card::before,
+  .item[data-featured='true'] .card::after {
+    display: none;
+    transition: none;
   }
 }

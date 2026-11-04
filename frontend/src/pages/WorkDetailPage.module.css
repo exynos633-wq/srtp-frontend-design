@@ -16,6 +16,10 @@
   font-weight: var(--weight-label);
 }
 
+.back {
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
 .back:hover {
   color: var(--color-text);
 }
@@ -57,16 +61,44 @@
   min-width: 0;
 }
 
-/* 工作与阅读界面用实色面板，长文不叠玻璃（视觉规范 §2.2）。 */
+/*
+ * 观看框「上台」（§4.3）：entered 时一次性 700ms（--dur-scene 600ms + 100ms 编排增量），
+ * 只写 transform / opacity；默认态不藏，SSR 与无 JS 时直接可见。
+ * 透视放在 keyframes 的 transform 里而不是父级 perspective：perspective/transform 会让
+ * 祖先成为 fixed 定位的包含块，而放大查看（PreviewViewer .zoomed）依赖视口定位；
+ * to 帧的 transform:none 也让动画结束后不再残留包含块。
+ */
+.viewerRise {
+  transform-origin: 50% 18%;
+}
+
+.viewerRise[data-entered='true'] {
+  animation: viewer-rise calc(var(--dur-scene) + 100ms) var(--ease-out) both;
+}
+
+@keyframes viewer-rise {
+  from {
+    opacity: 0.6;
+    transform: perspective(1200px) translateY(24px) rotateX(12deg) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 工作与阅读界面用实色面板，长文不叠玻璃（视觉规范 §2.2）；边光改光域令牌（§2.2 规律 02）。 */
 .info {
   display: grid;
   gap: var(--space-5);
   align-content: start;
   min-width: 0;
   padding: var(--panel-padding);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--glow-border);
   border-radius: var(--radius-panel);
   background: var(--color-panel);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
 .infoHeader {
@@ -187,5 +219,12 @@
 @media (max-width: 1023px) {
   .info {
     border-width: 1px 0 0;
+  }
+}
+
+/* 减少动态：观看框不播透视上台，直接显示（§4.5）。 */
+@media (prefers-reduced-motion: reduce) {
+  .viewerRise[data-entered='true'] {
+    animation: none;
   }
 }

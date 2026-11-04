@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { MockBadge } from '../../mocks/MockBadge'
 import { classNames } from '../../lib/classNames'
+import { GrainOverlay } from '../fx/GrainOverlay'
 import { SkipLink } from '../ui/SkipLink'
 import { PublicNav } from './PublicNav'
 import styles from './PublicLayout.module.css'
@@ -13,6 +14,7 @@ export default function PublicLayout() {
 
   return (
     <div className={styles.shell}>
+      <GrainOverlay />
       <SkipLink />
       <PublicNav overlay={isHome} />
       <main

@@ -14,6 +14,10 @@ export interface PageHeaderProps {
   headingTabIndex?: number
 }
 
+/**
+ * 页头只提供排布与 data-* 钩子；入场动画由具体页面驱动。
+ * 后台页面同样复用本组件，因此这里不包含任何自动播放的时间轴。
+ */
 export function PageHeader({
   title,
   eyebrow,
@@ -25,11 +29,24 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={classNames(styles.header, className)}>
-      {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
-      <h1 className={styles.title} ref={headingRef} tabIndex={headingTabIndex}>
-        {title}
+      {eyebrow ? (
+        <p className={styles.eyebrow} data-page-eyebrow>
+          {eyebrow}
+        </p>
+      ) : null}
+      <h1 className={styles.title} ref={headingRef} tabIndex={headingTabIndex} data-page-title>
+        {/* 逐行揭示需要裁切容器：内层只做 yPercent，动画由目录页驱动（动效设计 v2.0 §6）。 */}
+        <span className={styles.titleLine}>
+          <span className={styles.titleInner} data-page-title-inner>
+            {title}
+          </span>
+        </span>
       </h1>
-      {description ? <p className={styles.description}>{description}</p> : null}
+      {description ? (
+        <p className={styles.description} data-page-description>
+          {description}
+        </p>
+      ) : null}
       {children}
     </header>
   )

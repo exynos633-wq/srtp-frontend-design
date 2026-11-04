@@ -104,14 +104,30 @@
   --z-overlay: 200;
   --z-modal: 300;
 
-  /* —— 动效时长（动效设计 v1.0 的界面反馈段） —— */
-  --dur-fast: 120ms;
-  --dur-base: 180ms;
+  /* —— 动效（唯一来源：UI设计/动效设计v2.0.md，与 src/lib/motion.ts 同源） —— */
+  --dur-press: 140ms;
+  --dur-fast: 160ms;
+  --dur-base: 220ms;
   --dur-slow: 280ms;
   --dur-enter: 380ms;
   --dur-scene: 600ms;
+  --dur-cinema: 1200ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* —— 光域（唯一来源：UI设计/动效设计v2.1_高级动效方案.md §3.3） —— */
+  --light-glow: rgb(198 226 230 / 7%);
+  --light-accent: rgb(84 200 193 / 5%);
+  --light-wash: hsl(177 46% 62% / 10%);
+  --spotlight-size: 320px;
+  --glow-border: rgb(255 255 255 / 10%);
+  --glow-border-hover: rgb(255 255 255 / 16%);
+  --ambient-slow: 12s;
+  --ambient-slower: 30s;
+  --grain-opacity: 0.06;
+  --grain-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
 }
 
 /* 手机布局：<768（规范 §4.1）。 */
@@ -127,13 +143,18 @@
   }
 }
 
-/* 减少动态偏好：时长归零由变量统一处理，具体替代呈现留给 P06 动效阶段逐项实现。 */
+/*
+ * 减少动态偏好：去掉位移、镜头与惯性（叙事段归零），保留颜色与透明度反馈，
+ * 不把时长全部归零（UI设计/动效设计v2.0.md §9）。
+ */
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --dur-fast: 0ms;
-    --dur-base: 0ms;
+    --dur-press: 120ms;
+    --dur-fast: 160ms;
+    --dur-base: 220ms;
     --dur-slow: 0ms;
     --dur-enter: 0ms;
     --dur-scene: 0ms;
+    --dur-cinema: 0ms;
   }
 }

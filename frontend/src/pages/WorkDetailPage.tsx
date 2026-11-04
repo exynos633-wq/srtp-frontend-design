@@ -12,6 +12,7 @@ import { PreviewViewer } from '../components/works/PreviewViewer'
 import { resolvePreviewConfig } from '../viewer/workModelSource'
 import { classNames } from '../lib/classNames'
 import { prefersReducedMotion } from '../lib/prefersReducedMotion'
+import { EASE, SEC } from '../lib/motion'
 import type { PublicWork } from '../types/work'
 import styles from './WorkDetailPage.module.css'
 
@@ -73,7 +74,7 @@ function WorkDetailContent({ id }: { id?: string }) {
     if (!workId) return
     if (!prefersReducedMotion()) {
       const layers = pageRef.current?.querySelectorAll<HTMLElement>('[data-detail-layer]')
-      if (layers) gsap.set(layers, { opacity: 0, y: 16 })
+      if (layers) gsap.set(layers, { opacity: 0, y: 10 })
     }
     // 直接进入与目录进入都把焦点落在主标题；页面可用性不依赖转场是否完成。
     titleRef.current?.focus({ preventScroll: true })
@@ -88,12 +89,14 @@ function WorkDetailContent({ id }: { id?: string }) {
         gsap.set(layers, { clearProps: 'opacity,transform' })
         return
       }
+      // §7：信息列在封面到位前约 200ms（coverFlip 的 onEntered 时点）逐项入场，
+      // 单项 380ms、stagger 60ms、y 10；不再整组淡入。
       gsap.to(layers, {
         opacity: 1,
         y: 0,
-        duration: 0.5,
-        ease: 'power2.out',
-        stagger: 0.07,
+        duration: SEC.enter,
+        ease: EASE.out,
+        stagger: 0.06,
         overwrite: true,
         clearProps: 'opacity,transform',
       })
@@ -160,14 +163,21 @@ function WorkDetailContent({ id }: { id?: string }) {
       {!notFound && displayedWork ? (
         <div className={styles.layout}>
           <div className={styles.viewerColumn}>
-            <PreviewViewer
-              key={displayedWork.id}
-              work={displayedWork}
-              onEntered={handleEntered}
-              onPreviewStarted={handlePreviewStarted}
-              ensureAvailable={ensurePreviewAvailable}
-              resolvePreviewConfig={resolvePreviewConfig}
-            />
+            {/* 「展品上台」（§4.3）：entered 后一次性播 700ms，默认态直接可见，SSR/无 JS 不隐藏。 */}
+            <div
+              className={styles.viewerRise}
+              data-viewer-rise="true"
+              data-entered={entered ? 'true' : undefined}
+            >
+              <PreviewViewer
+                key={displayedWork.id}
+                work={displayedWork}
+                onEntered={handleEntered}
+                onPreviewStarted={handlePreviewStarted}
+                ensureAvailable={ensurePreviewAvailable}
+                resolvePreviewConfig={resolvePreviewConfig}
+              />
+            </div>
           </div>
 
           <aside className={styles.info} aria-label="作品信息">

@@ -112,9 +112,14 @@
   transform: rotate(-18deg) translateY(7px);
 }
 
-/* 查看器覆盖在封面之上；load/ready 后由真实 canvas 显示。 */
-.cover[data-status='interactive'] .coverImage {
-  opacity: 0;
+/*
+ * 封面→观看器的交接由 PreviewViewer 的 GSAP 在真实首帧后做 320ms crossfade，
+ * 不用 CSS 硬切；减少动态时直接隐藏封面。
+ */
+@media (prefers-reduced-motion: reduce) {
+  .cover[data-status='interactive'] .coverImage {
+    opacity: 0;
+  }
 }
 
 .scene {
@@ -219,6 +224,12 @@
 
 .statusAction {
   margin-top: var(--space-1);
+  /* §8 主/次按钮按压：scale(.97) 140ms；包装层做 transform，避免和共用 Button 的颜色过渡互相覆盖。 */
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+.statusAction:has(> button:active:not(:disabled)) {
+  transform: scale(0.97);
 }
 
 .pulse {
@@ -341,6 +352,14 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse {
     animation: none;
+  }
+
+  .statusAction {
+    transition: none;
+  }
+
+  .statusAction:has(> button:active:not(:disabled)) {
+    transform: none;
   }
 }
 

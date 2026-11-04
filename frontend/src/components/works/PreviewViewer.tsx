@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { classNames } from '../../lib/classNames'
 import { canUseCoverSource, runCoverTransition, runDirectCoverEntrance } from '../../lib/coverFlip'
 import { prefersReducedMotion } from '../../lib/prefersReducedMotion'
+import { EASE, SEC } from '../../lib/motion'
 import { takeCoverSource, type CoverSource } from '../../lib/worksNavigation'
 import type { ModelFormat } from '../../types/work'
 import type { ModelSource, ModelViewConfig, ViewerPhase } from '../../viewer/types'
@@ -32,6 +33,17 @@ const UNAVAILABLE_COPY = {
 }
 
 const EMPTY_VIEW_CONFIG: ModelViewConfig = {}
+
+/**
+ * §7 观看器的节奏，由 motion.ts 的令牌组合：
+ * - 封面→观看器交接 320ms crossfade（SEC.fast × 2）；
+ * - 放大/恢复 420ms（SEC.scene × 0.7，与卡片揭示同一个 420ms 校准值）。
+ * 外壳 260ms / 工具栏 200ms 在 ModelViewport 内随其实例挂载播放。
+ */
+const TIMING = {
+  handoff: SEC.fast * 2,
+  zoom: SEC.scene * 0.7,
+} as const
 
 /** 观看外壳只需要身份、名称、封面与可选模型来源；公开详情和管理授权预览都可直接传入。 */
 export interface PreviewWork {
@@ -110,6 +122,7 @@ export function PreviewViewer({
   const closingRef = useRef(false)
   const openTweenRef = useRef<gsap.core.Tween | null>(null)
   const closeTweenRef = useRef<gsap.core.Tween | null>(null)
+  const handoffTweenRef = useRef<gsap.core.Tween | null>(null)
 
   const resolvedConfig = useMemo<ModelViewConfig>(() => viewConfig ?? EMPTY_VIEW_CONFIG, [viewConfig])
 
@@ -211,6 +224,7 @@ export function PreviewViewer({
       attemptRef.current += 1
       openTweenRef.current?.kill()
       closeTweenRef.current?.kill()
+      handoffTweenRef.current?.kill()
     },
     [],
   )
@@ -398,8 +412,8 @@ export function PreviewViewer({
         top: from.top,
         width: from.width,
         height: from.height,
-        duration: 0.5,
-        ease: 'power3.inOut',
+        duration: TIMING.zoom,
+        ease: EASE.inOut,
         clearProps: 'position,left,top,width,height',
         onComplete: finishClose,
       },
@@ -437,8 +451,8 @@ export function PreviewViewer({
           top: to.top,
           width: to.width,
           height: to.height,
-          duration: 0.5,
-          ease: 'power3.inOut',
+          duration: TIMING.zoom,
+          ease: EASE.inOut,
           clearProps: 'position,left,top,width,height',
         },
       )
@@ -522,6 +536,32 @@ export function PreviewViewer({
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [finishClose, zoomOpen])
+
+  // 封面→观看器交接：只由真实首帧（status 进入 interactive）触发，不用定时器伪造 ready。
+  useGSAP(
+    () => {
+      const image = imageRef.current
+      if (!image) return
+      handoffTweenRef.current?.kill()
+      handoffTweenRef.current = null
+      if (status !== 'interactive') {
+        // 结束预览或重试时恢复封面，避免上一次交接的内联状态残留。
+        gsap.set(image, { clearProps: 'opacity' })
+        return
+      }
+      if (prefersReducedMotion()) {
+        gsap.set(image, { opacity: 0 })
+        return
+      }
+      handoffTweenRef.current = gsap.to(image, {
+        opacity: 0,
+        duration: TIMING.handoff,
+        ease: EASE.out,
+        overwrite: true,
+      })
+    },
+    { scope: rootRef, dependencies: [status] },
+  )
 
   const activeViewer = status === 'loading' || status === 'interactive' || status === 'viewer-error'
   const canEnd = activeViewer || status === 'checking' || status === 'unavailable' || status === 'check-error'
